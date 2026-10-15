@@ -71,8 +71,8 @@ tests check it on thousands of random inputs.
 
 | Greek | Definition | Intuition | Shown in the UI as |
 |---|---|---|---|
-| Delta $\Delta$ | $\partial V/\partial S$ | shares needed to hedge; ≈ probability of finishing in the money | per $1 in spot |
-| Gamma $\Gamma$ | $\partial^2 V/\partial S^2$ | how fast delta changes; largest at the money near expiry | per $1 in spot |
+| Delta $\Delta$ | $\partial V/\partial S$ | shares needed to hedge; ≈ probability of finishing in the money | per 1 unit of spot |
+| Gamma $\Gamma$ | $\partial^2 V/\partial S^2$ | how fast delta changes; largest at the money near expiry | per 1 unit of spot |
 | Vega $\nu$ | $\partial V/\partial\sigma$ | sensitivity to volatility; long options are long vega | per 1 vol point (σ +1%) |
 | Theta $\Theta$ | $\partial V/\partial t$ | time decay; the rent paid for gamma | per calendar day |
 | Rho $\rho$ | $\partial V/\partial r$ | sensitivity to interest rates | per 1% in rates |

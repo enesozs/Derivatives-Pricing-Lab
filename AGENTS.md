@@ -29,7 +29,7 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0–7 are complete.** Next: Phase 8 (Learn mode, guided lessons inside the app).
+- **Phases 0–8 are complete.** §5 lists possible extensions; none is scheduled.
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -86,6 +86,10 @@ should explain *why*, not just *what*.
   - **Counterparty risk** (`/credit/xva`): Hull–White exposure simulation of a swap; EPE/PFE
     profile, sample paths, CVA/DVA by year, collateral threshold, swaption check of exposure.
   - See `docs/07-credit.md`.
+- **Learn** (`/learn`): a 7-chapter course. Each chapter renders its `docs/` note in the app
+  (markdown + KaTeX math, section sidebar) beside 3–4 guided experiments that link to the pages;
+  chapters can be marked done (stored in the browser). Every area's tab row links to its chapter
+  ("Theory behind this area", `components/area-nav.tsx`).
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -137,7 +141,7 @@ should explain *why*, not just *what*.
   - forward-start options and the CDS mid-point engine;
 
   plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
-  all 23 pages.
+  all 23 pages plus the Learn chapters.
 
 ---
 
@@ -270,6 +274,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │       │   │                          simple-charts.tsx (LinesChart, HistogramChart)
 │       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
 │       │   ├── greek-tiles.tsx      ✓ shared by every area (metadata in lib/greeks.ts)
+│       │   ├── area-nav.tsx         ✓ every area's tab row + link to its Learn chapter
 │       │   ├── model-section.tsx    ✓ Black–Scholes / Heston panel (exotics, structured)
 │       │   ├── stat-grid.tsx        ✓ hairline stat tiles (rates, structured)
 │       │   └── app-shell, app-header, page-header, panel-section, param-control,
@@ -288,7 +293,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │           ├── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
 │           ├── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
 │           ├── structured/          ✓ five pages + market-section.tsx
-│           └── credit/              ✓ cds-page, xva-page
+│           ├── credit/              ✓ cds-page, xva-page
+│           └── learn/               ✓ chapters.ts (course + experiments), markdown.tsx, course and
+│                                      chapter pages, progress.ts
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
 └── docs/                            ✓ 01-vanilla-options … 07-credit; one note per phase
 ```
@@ -395,9 +402,10 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - Simplified on purpose: independent default and rates (no wrong-way risk), flat hazards for
   xVA, instant margining (no margin period of risk), single swap (no netting set).
 
-### Phase 8: Learn mode ← **next**
-- In-app course: the `docs/` notes rendered with math, plus guided experiments that link to
-  the pages; a "Learn" link from every page to its chapter
+### Phase 8: Learn mode ✓
+- [x] In-app course: the `docs/` notes rendered with math (react-markdown + KaTeX), section
+      navigation, guided experiments per chapter, progress marks
+- [x] Shared `AreaNav` with a link from every area to its chapter
 
 ### Possible extensions (not scheduled)
 - Wrong-way risk, netting sets and FVA/KVA in the xVA engine
@@ -425,6 +433,7 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 | Charts | Apache ECharts 6 (modular imports) | Canvas performance, smooth updates, log axes, 3D later via echarts-gl |
 | Data fetching | TanStack Query | Caching, cancellation, keep-previous-data during slider drags |
 | Routing | React Router v8, declarative mode (`BrowserRouter`/`Routes`/`NavLink`) | Lazy pages via `React.lazy`; `NavLink` sets `aria-current` for the segmented nav style |
+| Learn chapters | react-markdown, remark-gfm, remark-math, rehype-katex, rehype-slug, KaTeX, @tailwindcss/typography | Renders the `docs/` notes (tables, math) in the app; one source of truth for the theory |
 | Icons / fonts | lucide-react; Inter Variable + Geist Mono (fontsource) | |
 | Frontend quality | `tsc -b` (strict), oxlint, prettier | |
 | Browser testing | Playwright (Python, dev dependency) driving the installed Google Chrome | `make e2e`; no browser download needed |
@@ -490,12 +499,17 @@ for React + FastAPI; pip + venv instead of uv for now; git initialised.
 - Inputs are debounced (150 ms) before hitting the API; queries use `keepPreviousData`.
 - When a backend schema changes, update `src/lib/api.ts` in the same change.
 - Label synthetic data as synthetic wherever it appears.
+- The Learn course reads `docs/*.md` directly (Vite `import.meta.glob`, `server.fs.allow: ['..']`).
+  Write display math as `$$…$$` (fenced on its own lines or inline; both render) and avoid bare
+  `$` for currency. When a page's control labels change, update the experiment steps in
+  `features/learn/chapters.ts`; they quote those labels.
 
 **Adding a feature, end to end**
 1. Library: instrument/model/engine plus tests (reference, consistency, convergence).
 2. API: schema + route + API test.
 3. Frontend: types in `lib/api.ts`, then the page/section under `features/`.
 4. Extend `e2e/smoke.py` with the new page's key interaction, and run `make e2e`.
+   For a new area, add a `docs/` chapter and its entry (with experiments) in `features/learn/chapters.ts`.
 5. Update §2, §4 and §5 of this file.
 
 ---

@@ -11,6 +11,7 @@ with a web interface. It covers five areas:
 - **Structured products**: autocallables, reverse convertibles, cliquets, variance swaps, and
   portfolio stress testing.
 - **Credit**: CDS and default curves; counterparty risk (CVA/DVA) on swaps.
+- **Learn**: an in-app course, one chapter per area, with guided experiments on the pages.
 
 Prices are cross-checked against QuantLib. The theory behind each area is in `docs/`; the
 roadmap and architecture are in `AGENTS.md`.

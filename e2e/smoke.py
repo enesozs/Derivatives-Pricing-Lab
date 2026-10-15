@@ -222,6 +222,23 @@ def main() -> int:
         expect(hero).not_to_have_text(uncollateralised, timeout=20_000)
         shot(page, "credit-xva")
 
+        # Learn: every area links to its chapter; chapters render math and link to experiments.
+        page.get_by_role("link", name="Theory behind this area").click()
+        expect(
+            page.get_by_role(
+                "heading", name="07 · Credit: default curves, CDS and counterparty risk"
+            )
+        ).to_be_visible(timeout=15_000)
+        assert page.locator(".katex").count() > 10, "chapter math did not typeset"
+        page.get_by_role("button", name="Mark as done").click()
+        page.get_by_role("link", name="Open the page").first.click()
+        expect(page.get_by_role("heading", name="Credit default swaps")).to_be_visible()
+        page.get_by_role("link", name="Learn", exact=True).click()
+        expect(page.get_by_text("1 of 7 chapters marked as done")).to_be_visible()
+        page.get_by_role("link", name=re.compile("Vanilla options")).click()
+        expect(page.get_by_role("heading", name=re.compile("^01"))).to_be_visible(timeout=15_000)
+        shot(page, "learn")
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()

@@ -6,6 +6,8 @@ import { AmericanPage, ExoticPricerPage } from '@/features/exotics/pages'
 import { MultiAssetLayout } from '@/features/multi-asset/layout'
 import { CorrelationPage, QuantoPage } from '@/features/multi-asset/pages'
 import { CreditLayout } from '@/features/credit/layout'
+import { LearnLayout } from '@/features/learn/layout'
+import { ChapterPage, CoursePage } from '@/features/learn/pages'
 import { CdsPage, XvaPage } from '@/features/credit/pages'
 import { RatesLayout } from '@/features/rates/layout'
 import { StructuredLayout } from '@/features/structured/layout'
@@ -69,6 +71,10 @@ export default function App() {
         <Route path="credit" element={<CreditLayout />}>
           <Route index element={<CdsPage />} />
           <Route path="xva" element={<XvaPage />} />
+        </Route>
+        <Route path="learn" element={<LearnLayout />}>
+          <Route index element={<CoursePage />} />
+          <Route path=":chapterId" element={<ChapterPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
