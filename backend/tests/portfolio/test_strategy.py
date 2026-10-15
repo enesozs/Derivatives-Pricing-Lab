@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from derivlab import AnalyticEngine, CRREngine
+from derivlab import AnalyticEngine, BinomialEngine
 from derivlab.portfolio import Position, Strategy, horizon_values, strategy_value
 from tests.conftest import european
 
@@ -49,7 +49,7 @@ def test_calendar_spread_keeps_time_value_of_back_month(market, model):
 
 
 def test_engine_agnostic(market, model):
-    tree, _ = strategy_value(straddle(), market, model, CRREngine(1000))
+    tree, _ = strategy_value(straddle(), market, model, BinomialEngine(1000))
     exact, _ = strategy_value(straddle(), market, model, ENGINE)
     assert tree.value == pytest.approx(exact.value, abs=5e-3)
 

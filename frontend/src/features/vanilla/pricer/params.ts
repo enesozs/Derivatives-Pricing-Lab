@@ -11,6 +11,7 @@ export interface VanillaParams {
   dividendPct: number
   volPct: number
   treeSteps: number
+  pdeSpaceSteps: number
   mcPaths: number
 }
 
@@ -24,6 +25,7 @@ export const DEFAULT_PARAMS: VanillaParams = {
   dividendPct: 0,
   volPct: 20,
   treeSteps: 500,
+  pdeSpaceSteps: 400,
   mcPaths: 100_000,
 }
 
@@ -41,5 +43,11 @@ export function toInputs(p: VanillaParams): VanillaInputs {
 }
 
 export function toPriceRequest(p: VanillaParams): PriceRequest {
-  return { ...toInputs(p), tree_steps: p.treeSteps, mc_paths: p.mcPaths, seed: 42 }
+  return {
+    ...toInputs(p),
+    tree_steps: p.treeSteps,
+    pde_space_steps: p.pdeSpaceSteps,
+    mc_paths: p.mcPaths,
+    seed: 42,
+  }
 }

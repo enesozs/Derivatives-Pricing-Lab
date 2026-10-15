@@ -19,34 +19,44 @@ interface ConvergenceProps {
 
 const MARKER = { symbol: 'circle', symbolSize: 8 } as const
 
+const GRID_SERIES = [
+  { key: 'crr', label: 'CRR tree', color: 'series1' },
+  { key: 'leisen_reimer', label: 'Leisen–Reimer tree', color: 'series2' },
+  { key: 'pde', label: 'Crank–Nicolson PDE', color: 'series3' },
+] as const
+
 export function LatticeConvergenceChart({ data, stale }: ConvergenceProps) {
   const c = useChartColors()
   const option = useMemo<ChartOption | null>(() => {
     if (!data) return null
     const axis = axisStyle(c)
     // Log scales cannot show an exact zero; floor at machine-precision level.
-    const points = data.lattice.map((p) => [p.steps, Math.max(p.abs_error, 1e-12)])
+    const floor = (e: number) => Math.max(e, 1e-12)
+    const all = GRID_SERIES.flatMap((s) => data[s.key].map((p) => p.steps))
     return {
       animationDurationUpdate: 200,
-      grid: GRID,
+      grid: { ...GRID, right: 96 },
       tooltip: {
         ...tooltipStyle(c),
+        trigger: 'item',
         formatter: (raw: unknown) => {
-          const i = (raw as { dataIndex: number }[])[0]?.dataIndex ?? 0
-          const p = data.lattice[i]
+          const item = raw as { seriesIndex: number; dataIndex: number }
+          const series = GRID_SERIES[item.seriesIndex]
+          const p = data[series.key][item.dataIndex]
+          const unit = series.key === 'pde' ? 'space steps' : 'steps'
           return (
-            tooltipHeader(`${integer(p.steps)} steps`) +
-            tooltipRow(c.series1, scientific(p.abs_error), 'Absolute error') +
-            tooltipRow(c.muted, fixed(p.value, 5), 'Tree value')
+            tooltipHeader(`${series.label} · ${integer(p.steps)} ${unit}`) +
+            tooltipRow(c[series.color], scientific(p.abs_error), 'Absolute error') +
+            tooltipRow(c.muted, fixed(p.value, 6), 'Value')
           )
         },
       },
       xAxis: {
         type: 'log',
         logBase: 2,
-        min: data.lattice[0].steps,
-        max: data.lattice[data.lattice.length - 1].steps,
-        name: 'Tree steps',
+        min: Math.min(...all),
+        max: Math.max(...all),
+        name: 'Steps (tree) / space steps (PDE)',
         nameLocation: 'middle',
         nameGap: 28,
         ...axis,
@@ -58,29 +68,36 @@ export function LatticeConvergenceChart({ data, stale }: ConvergenceProps) {
         ...axis,
         axisLabel: { ...axis.axisLabel, formatter: (v: number) => scientific(v) },
       },
-      series: [
-        {
-          name: 'Absolute error',
-          type: 'line',
-          data: points,
-          ...MARKER,
-          lineStyle: { width: 2, color: c.series1 },
-          itemStyle: { color: c.series1, borderColor: c.surface, borderWidth: 2 },
-        },
-      ],
+      series: GRID_SERIES.map((s) => ({
+        name: s.label,
+        type: 'line' as const,
+        data: data[s.key].map((p) => [p.steps, floor(p.abs_error)]),
+        ...MARKER,
+        lineStyle: { width: 2, color: c[s.color] },
+        itemStyle: { color: c[s.color], borderColor: c.surface, borderWidth: 2 },
+        // Direct labels at the line ends: identity never relies on colour alone.
+        endLabel: { show: true, formatter: s.label.split(' ')[0], color: c.ink2, fontSize: 11 },
+      })),
     }
   }, [data, c])
 
   return (
     <ChartCard
-      title="Tree convergence"
-      description="Error of the CRR tree against the reference. Roughly halves when steps double, with an odd/even zig-zag."
+      title="Grid and tree convergence"
+      description="Error against the reference as resolution doubles. CRR improves ~2× per doubling and zig-zags; Leisen–Reimer and the PDE improve ~4× (second order)."
+      action={
+        <div className="flex flex-wrap gap-4">
+          {GRID_SERIES.map((s) => (
+            <LegendKey key={s.key} color={c[s.color]} label={s.label} />
+          ))}
+        </div>
+      }
       stale={stale}
     >
       {option ? (
         <EChart
           option={option}
-          ariaLabel="Log-log chart of binomial tree error versus number of steps"
+          ariaLabel="Log-log chart of pricing error versus resolution for CRR, Leisen–Reimer and PDE"
         />
       ) : (
         <div className="h-72" />

@@ -31,7 +31,9 @@ export function LegsTable({ params, data, stale }: LegsTableProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Legs</CardTitle>
+        <CardTitle className="text-base" render={<h2 />}>
+          Legs
+        </CardTitle>
         <CardDescription>
           Unit price per option; value and Greeks scaled by position size and side.
         </CardDescription>

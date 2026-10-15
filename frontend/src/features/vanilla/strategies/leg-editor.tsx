@@ -2,7 +2,7 @@ import { XIcon } from 'lucide-react'
 import { NumberInput } from '@/components/number-input'
 import { Segmented } from '@/components/segmented'
 import { Button } from '@/components/ui/button'
-import type { OptionKind } from '@/lib/api'
+import type { ExerciseStyle, OptionKind } from '@/lib/api'
 import type { Leg, Side } from './params'
 
 interface LegEditorProps {
@@ -78,6 +78,17 @@ export function LegEditor({ leg, index, onChange, onRemove }: LegEditorProps) {
           unit="y"
         />
       </div>
+      <Segmented<ExerciseStyle>
+        label={`Leg ${index + 1} exercise style`}
+        size="sm"
+        value={leg.exercise}
+        onChange={set('exercise')}
+        options={[
+          { value: 'european', label: 'European' },
+          { value: 'american', label: 'American' },
+        ]}
+        className="w-full"
+      />
     </fieldset>
   )
 }

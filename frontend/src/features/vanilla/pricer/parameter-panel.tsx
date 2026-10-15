@@ -10,9 +10,11 @@ import { DEFAULT_PARAMS, type VanillaParams } from './params'
 interface ParameterPanelProps {
   params: VanillaParams
   onChange: (params: VanillaParams) => void
+  /** Tree/PDE/Monte Carlo resolution controls; hidden on pages that don't use them. */
+  showNumerics?: boolean
 }
 
-export function ParameterPanel({ params, onChange }: ParameterPanelProps) {
+export function ParameterPanel({ params, onChange, showNumerics = true }: ParameterPanelProps) {
   const set =
     <K extends keyof VanillaParams>(key: K) =>
     (value: VanillaParams[K]) =>
@@ -108,25 +110,40 @@ export function ParameterPanel({ params, onChange }: ParameterPanelProps) {
           unit="%"
         />
       </PanelSection>
-      <Separator />
-      <PanelSection title="Numerics" hint="Resolution of the tree and the Monte Carlo simulation.">
-        <ParamControl
-          label="Tree steps"
-          value={params.treeSteps}
-          onChange={set('treeSteps')}
-          min={10}
-          max={2000}
-          step={10}
-        />
-        <ParamControl
-          label="Monte Carlo paths"
-          value={params.mcPaths}
-          onChange={set('mcPaths')}
-          min={1000}
-          max={500_000}
-          step={1000}
-        />
-      </PanelSection>
+      {showNumerics && (
+        <>
+          <Separator />
+          <PanelSection
+            title="Numerics"
+            hint="Resolution of the trees, the PDE grid (time steps = half) and Monte Carlo."
+          >
+            <ParamControl
+              label="Tree steps"
+              value={params.treeSteps}
+              onChange={set('treeSteps')}
+              min={10}
+              max={2000}
+              step={10}
+            />
+            <ParamControl
+              label="PDE grid (space steps)"
+              value={params.pdeSpaceSteps}
+              onChange={set('pdeSpaceSteps')}
+              min={40}
+              max={1600}
+              step={20}
+            />
+            <ParamControl
+              label="Monte Carlo paths"
+              value={params.mcPaths}
+              onChange={set('mcPaths')}
+              min={1000}
+              max={500_000}
+              step={1000}
+            />
+          </PanelSection>
+        </>
+      )}
       <Separator />
       <div className="px-5 py-4">
         <Button

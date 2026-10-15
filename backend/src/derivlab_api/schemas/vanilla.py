@@ -8,8 +8,11 @@ from derivlab import American, BlackScholes, European, Market, PlainVanilla, Van
 
 from .common import ExerciseStyle, GreeksOut, OptionKind
 
+MethodId = Literal["analytic", "crr", "leisen_reimer", "pde", "monte_carlo"]
+TreeScheme = Literal["crr", "jarrow-rudd", "leisen-reimer"]
 
-class VanillaInputs(BaseModel):
+
+class ContractInputs(BaseModel):
     kind: OptionKind = "call"
     exercise: ExerciseStyle = "european"
     strike: float = Field(100.0, gt=0)
@@ -17,20 +20,24 @@ class VanillaInputs(BaseModel):
     spot: float = Field(100.0, gt=0)
     rate: float = Field(0.05, ge=-0.1, le=0.5, description="Continuously compounded")
     dividend_yield: float = Field(0.0, ge=0, le=0.5)
+
+    def build_contract(self) -> tuple[VanillaOption, Market]:
+        exercise = European(self.expiry) if self.exercise == "european" else American(self.expiry)
+        option = VanillaOption(PlainVanilla(self.kind, self.strike), exercise)
+        return option, Market(self.spot, self.rate, self.dividend_yield)
+
+
+class VanillaInputs(ContractInputs):
     volatility: float = Field(0.20, gt=0, le=3)
 
     def build(self) -> tuple[VanillaOption, Market, BlackScholes]:
-        exercise = European(self.expiry) if self.exercise == "european" else American(self.expiry)
-        option = VanillaOption(PlainVanilla(self.kind, self.strike), exercise)
-        return (
-            option,
-            Market(self.spot, self.rate, self.dividend_yield),
-            BlackScholes(self.volatility),
-        )
+        option, market = self.build_contract()
+        return option, market, BlackScholes(self.volatility)
 
 
 class PriceRequest(VanillaInputs):
     tree_steps: int = Field(500, ge=3, le=5000)
+    pde_space_steps: int = Field(400, ge=40, le=2000, description="Time steps are half of this")
     mc_paths: int = Field(100_000, ge=1_000, le=1_000_000)
     seed: int = 42
 
@@ -41,7 +48,7 @@ class PriceRequest(VanillaInputs):
 
 
 class MethodResult(BaseModel):
-    method: Literal["analytic", "crr", "monte_carlo"]
+    method: MethodId
     label: str
     status: Literal["ok", "unsupported", "error"]
     value: float | None = None
@@ -50,6 +57,7 @@ class MethodResult(BaseModel):
     ci_high: float | None = None
     abs_error: float | None = None
     runtime_ms: float | None = None
+    greeks: GreeksOut | None = None
     note: str | None = None
 
 
@@ -73,7 +81,7 @@ class ProfileResponse(BaseModel):
     rho: list[float | None]
 
 
-class LatticePointOut(BaseModel):
+class ConvergencePointOut(BaseModel):
     steps: int
     value: float
     abs_error: float
@@ -88,26 +96,19 @@ class MonteCarloPointOut(BaseModel):
 class ConvergenceResponse(BaseModel):
     reference: float
     reference_label: str
-    lattice: list[LatticePointOut]
+    crr: list[ConvergencePointOut]
+    leisen_reimer: list[ConvergencePointOut]
+    pde: list[ConvergencePointOut]
     monte_carlo: list[MonteCarloPointOut]
     monte_carlo_note: str | None = None
 
 
-class ImpliedVolRequest(BaseModel):
-    kind: OptionKind = "call"
-    exercise: ExerciseStyle = "european"
-    strike: float = Field(100.0, gt=0)
-    expiry: float = Field(1.0, gt=0, le=30)
-    spot: float = Field(100.0, gt=0)
-    rate: float = Field(0.05, ge=-0.1, le=0.5)
-    dividend_yield: float = Field(0.0, ge=0, le=0.5)
+class ImpliedVolRequest(ContractInputs):
     price: float = Field(10.45, gt=0, description="Observed option price per unit")
-    tree_steps: int = Field(300, ge=10, le=2000, description="Used for American options")
+    tree_steps: int = Field(301, ge=11, le=2001, description="Used for American options")
 
     def build(self) -> tuple[VanillaOption, Market]:
-        exercise = European(self.expiry) if self.exercise == "european" else American(self.expiry)
-        option = VanillaOption(PlainVanilla(self.kind, self.strike), exercise)
-        return option, Market(self.spot, self.rate, self.dividend_yield)
+        return self.build_contract()
 
 
 class ImpliedVolResponse(BaseModel):
@@ -122,3 +123,41 @@ class ImpliedVolResponse(BaseModel):
     #: Model price as a function of volatility, to show what the solver inverts.
     curve_vols: list[float]
     curve_prices: list[float]
+
+
+class TreeRequest(VanillaInputs):
+    steps: int = Field(5, ge=1, le=10)
+    scheme: TreeScheme = "crr"
+
+
+class TreeNodeOut(BaseModel):
+    level: int
+    index: int
+    spot: float
+    value: float
+    exercised: bool
+
+
+class TreeResponse(BaseModel):
+    steps: int
+    dt: float
+    up: float
+    down: float
+    probability: float
+    nodes: list[TreeNodeOut]
+
+
+class PDESliceOut(BaseModel):
+    #: Calendar time from today, in years.
+    time: float
+    values: list[float]
+
+
+class PDEGridResponse(BaseModel):
+    spots: list[float]
+    payoff: list[float]
+    #: Option value across spot at a handful of dates between today and expiry.
+    slices: list[PDESliceOut]
+    #: Early-exercise boundary (American only): spot at which exercise starts, per date.
+    boundary_times: list[float]
+    boundary_spots: list[float | None]

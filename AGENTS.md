@@ -29,21 +29,25 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- The legacy Streamlit project (`options_lab`) was deleted for a fresh start. Only its ideas and
-  reference values survive, in the new tests.
-- **Phase 0 (MVP) is complete. Phase 1 is in progress.** The app has three routed pages under *Vanilla*:
-  - **Pricer** (`/vanilla`): three pricing methods, Greeks, value/Greek curves, method
-    comparison, tree and Monte Carlo convergence.
-  - **Implied volatility** (`/vanilla/implied-vol`): price in, volatility out; no-arbitrage bounds;
-    the price-vs-volatility curve the solver inverts.
-  - **Strategies** (`/vanilla/strategies`): 11 presets plus free-form legs (up to 8) and shares of
-    the underlying; net debit/credit, max profit/loss, breakevens, P&L today and at the first
-    expiry, position Greeks.
-- Library: `AnalyticEngine`, `CRREngine`, `MonteCarloEngine`, `calibration.implied_volatility`,
-  `portfolio.Strategy` / `strategy_value` / `horizon_values`, research helpers.
-- API: `POST /api/vanilla/{price,profile,convergence,implied-vol}`, `POST /api/strategies/analyze`,
-  `GET /api/health`.
-- Tests: 68 backend tests (pytest + hypothesis) and a Playwright browser smoke test (`make e2e`).
+- **Phases 0 and 1 are complete.** Next up: Phase 2 (volatility surfaces and models).
+- The *Vanilla* area has five routed pages:
+  - **Pricer** (`/vanilla`): five methods side by side (Black–Scholes, CRR and Leisen–Reimer
+    trees, Crank–Nicolson PDE, Monte Carlo), each with value, interval, error, Greeks and
+    runtime; value and Greek curves; tree/PDE/MC convergence studies.
+  - **Implied volatility** (`/vanilla/implied-vol`): price in, volatility out; no-arbitrage bounds.
+  - **Trees & grids** (`/vanilla/methods`): node-by-node binomial tree (3 schemes), PDE solution
+    slices over time, American early-exercise boundary.
+  - **Strategies** (`/vanilla/strategies`): 11 presets, leg editor (European/American legs),
+    P&L today/at horizon, breakevens, max profit/loss, spot × volatility stress heatmap.
+  - **Hedging** (`/vanilla/hedging`): discrete delta-hedging simulator with P&L distribution,
+    frequency study vs Derman–Kamal, sample paths, costs and volatility misspecification.
+- Library engines: `AnalyticEngine`, `BinomialEngine` (crr / jarrow-rudd / leisen-reimer),
+  `FiniteDifferenceEngine`, `MonteCarloEngine` (pathwise + likelihood-ratio Greeks); plus
+  `risk.bump_greeks`, `calibration.implied_volatility`, `portfolio.Strategy`,
+  `hedging.simulate_delta_hedge`, `research` convergence helpers.
+- Tests: 111 backend tests (incl. hypothesis no-arbitrage properties) and a Playwright smoke test
+  over every page (`make e2e`).
+- Theory: `docs/01-vanilla-options.md`.
 
 ---
 
@@ -137,22 +141,22 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   ├── engines/
 │   │   │   ├── base.py              ✓ PricingEngine protocol
 │   │   │   ├── analytic/            ✓ Black–Scholes; later Black-76, barriers, Asians, Margrabe…
-│   │   │   ├── lattice/             ✓ CRR; later trinomial, short-rate trees
-│   │   │   ├── montecarlo/          ✓ paths.py, engine.py; later QMC, Brownian bridge, LSM
-│   │   │   ├── pde/                 Phase 1: Crank–Nicolson + Rannacher, American via penalty
+│   │   │   ├── lattice/             ✓ binomial.py (CRR, Jarrow–Rudd, Leisen–Reimer; tree_nodes)
+│   │   │   ├── montecarlo/          ✓ paths.py, engine.py (pathwise/LR Greeks); later QMC, LSM
+│   │   │   ├── pde/                 ✓ Crank–Nicolson + Rannacher, American via penalty
 │   │   │   └── fourier/             Phase 2: Carr–Madan, COS
 │   │   ├── research/                ✓ convergence.py, profile.py
 │   │   ├── calibration/             ✓ implied_vol.py; Phase 2: SVI, Heston/SABR calibration
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
-│   │   ├── risk/                    Phase 1: bump-and-revalue, MC pathwise/LR Greeks, scenarios
-│   │   ├── hedging/                 Phase 1: hedging simulations
+│   │   ├── risk/                    ✓ bump.py (bump-and-revalue Greeks for any engine)
+│   │   ├── hedging/                 ✓ delta.py (discrete delta hedging, frequency study)
 │   │   └── data/                    Phase 2: option-chain loaders, synthetic data (labelled)
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
-│   │   ├── schemas/                 ✓ common.py, vanilla.py, strategies.py (Pydantic models)
-│   │   ├── routes/                  ✓ vanilla.py, strategies.py: one router per product family
+│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging (Pydantic models)
+│   │   ├── routes/                  ✓ vanilla, strategies, hedging: one router per area
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
-│   └── tests/                       ✓ mirrors src: engines/, calibration/, portfolio/, research/, api/
+│   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
 │   ├── package.json  vite.config.ts  components.json (coss/shadcn registry config)
 │   └── src/
@@ -172,9 +176,11 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │               ├── greeks.ts  greek-tiles.tsx   ✓ Greek display metadata + tiles, shared
 │               ├── pricer/          ✓ one folder per page: params.ts, data hook, panels, charts
 │               ├── implied-vol/     ✓
-│               └── strategies/      ✓ presets in params.ts
+│               ├── methods/         ✓ Trees & grids page
+│               ├── strategies/      ✓ presets in params.ts; scenario heatmap
+│               └── hedging/         ✓
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            theory notes, one per phase (start in Phase 1)
+└── docs/                            ✓ 01-vanilla-options.md; one theory note per phase
 ```
 
 ---
@@ -193,24 +199,24 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - [x] Tooling: ruff, pyright, pytest + hypothesis, oxlint + prettier, Makefile
 - [x] `git init` and first commit
 
-### Phase 1: Vanilla options done properly ← **current**
+### Phase 1: Vanilla options done properly ✓
 - [x] Implied volatility solver (Brent with no-arbitrage bounds, any engine) and IV page
-- [x] Routing (React Router, lazy-loaded pages with hover preloading) and the Vanilla sub-navigation
-- [x] Multi-leg strategies: presets, leg editor, P&L today/at horizon, breakevens, max profit/loss
-- [x] Browser smoke test (`e2e/smoke.py`)
-- [ ] `docs/01-vanilla-options.md`: theory note for what the pages show
-- Black-76 (options on futures/forwards) and Bachelier (normal model) analytic engines
-- PDE engine: Crank–Nicolson with Rannacher smoothing, American via penalty/Brennan–Schwartz,
-  non-uniform grid around the strike
-- Trinomial and Jarrow–Rudd trees; Richardson extrapolation; interactive small-tree visualiser
-- `risk/`: bump-and-revalue Greeks for any engine (common random numbers for MC); MC pathwise and
-  likelihood-ratio Greeks
-- Delta-hedging simulator (discrete rebalancing, costs, vol misspecification)
-- More hypothesis properties: price bounds, monotonicity in strike/vol/maturity, convexity in strike
-- Strategies: American legs in the editor (API already supports them), P&L in volatility/time
-  (scenario grid / heatmap)
+- [x] Routing (React Router, lazy pages with hover preloading) and the Vanilla sub-navigation
+- [x] Multi-leg strategies: presets, leg editor (incl. American legs), P&L today/at horizon,
+      breakevens, max profit/loss, spot × volatility stress heatmap
+- [x] Binomial schemes CRR, Jarrow–Rudd, Leisen–Reimer; tree Greeks; small-tree visualiser
+- [x] PDE engine: Crank–Nicolson + Rannacher, log-spot grid, American via penalty method,
+      solution slices and early-exercise boundary
+- [x] Monte Carlo pathwise (Δ, ν, ρ, Θ) and likelihood-ratio (Γ) Greeks; generic bump Greeks
+- [x] Delta-hedging simulator: discrete re-balancing, costs, volatility misspecification,
+      frequency study against Derman–Kamal
+- [x] Hypothesis no-arbitrage properties: bounds, monotonicity, convexity, American ≥ European
+- [x] Browser smoke test (`e2e/smoke.py`); theory note `docs/01-vanilla-options.md`
+- Moved: Black-76 and Bachelier engines and trinomial trees to Phase 5, where caps, floors,
+  swaptions and short-rate models need them. Dropped: Richardson extrapolation, since
+  Leisen–Reimer already gives smooth second-order convergence.
 
-### Phase 2: Volatility beyond a constant σ
+### Phase 2: Volatility beyond a constant σ ← **next**
 - Real option-chain loading (yfinance) with cleaning; cached snapshots for reproducible tests
 - Implied-vol surface; SVI / SSVI fitting; static-arbitrage checks (calendar, butterfly)
 - Models: Merton jump-diffusion, Heston (Fourier: Carr–Madan FFT and COS), SABR (Hagan)
@@ -239,6 +245,7 @@ assets, has an unusual shape, or embeds features like early redemption.
 ### Phase 5: Interest-rate derivatives
 - Day counts and schedules; curve bootstrapping from deposits/FRAs/swaps (`market/` package)
 - Bonds, FRAs, interest-rate swaps
+- Black-76 (options on futures/forwards) and Bachelier (normal model) analytic engines
 - Caps/floors and swaptions (Black-76 and Bachelier)
 - Short-rate models: Vasicek, Hull–White (analytic bonds + trinomial tree); calibration
 

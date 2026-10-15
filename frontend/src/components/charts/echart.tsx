@@ -1,4 +1,13 @@
-import { LineChart, type LineSeriesOption } from 'echarts/charts'
+import {
+  BarChart,
+  type BarSeriesOption,
+  HeatmapChart,
+  type HeatmapSeriesOption,
+  LineChart,
+  type LineSeriesOption,
+  ScatterChart,
+  type ScatterSeriesOption,
+} from 'echarts/charts'
 import {
   GridComponent,
   type GridComponentOption,
@@ -10,6 +19,8 @@ import {
   type MarkPointComponentOption,
   TooltipComponent,
   type TooltipComponentOption,
+  VisualMapComponent,
+  type VisualMapComponentOption,
 } from 'echarts/components'
 import * as echarts from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -18,7 +29,11 @@ import { cn } from '@/lib/utils'
 
 // Register only what we use; keeps the bundle far smaller than `import * as echarts`.
 echarts.use([
+  BarChart,
+  HeatmapChart,
   LineChart,
+  ScatterChart,
+  VisualMapComponent,
   GridComponent,
   LegendComponent,
   MarkLineComponent,
@@ -28,7 +43,11 @@ echarts.use([
 ])
 
 export type ChartOption = echarts.ComposeOption<
+  | BarSeriesOption
+  | HeatmapSeriesOption
   | LineSeriesOption
+  | ScatterSeriesOption
+  | VisualMapComponentOption
   | GridComponentOption
   | LegendComponentOption
   | MarkLineComponentOption

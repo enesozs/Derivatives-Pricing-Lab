@@ -46,6 +46,7 @@ def main() -> int:
         page.get_by_role("radio", name="Put").first.click()
         page.get_by_role("radio", name="American").first.click()
         expect(page.get_by_text("Not supported")).to_have_count(2)
+        expect(page.get_by_text("Crank–Nicolson PDE · 400×200")).to_be_visible()
         shot(page, "pricer")
 
         # Implied volatility: round-trips the Black–Scholes price; flags arbitrage violations.
@@ -59,9 +60,26 @@ def main() -> int:
         expect(hero).to_have_text("20.00%")
         shot(page, "implied-vol")
 
+        # Trees & grids: tree visualiser and PDE boundary for an American put (the page default).
+        page.get_by_role("link", name="Trees & grids").click()
+        expect(page.get_by_role("heading", name="Binomial tree, node by node")).to_be_visible()
+        page.get_by_role("radio", name="Leisen–Reimer").click()
+        page.get_by_role("radio", name="8", exact=True).click()
+        expect(page.get_by_text("Early-exercise boundary")).to_be_visible()
+        expect(page.get_by_text("Switch to American exercise")).to_have_count(0)
+        shot(page, "methods")
+
+        # Hedging: the simulated error should sit close to the Derman–Kamal approximation.
+        page.get_by_role("link", name="Hedging").click()
+        expect(page.get_by_text("Theory (Derman–Kamal)")).to_be_visible()
+        error = float(hero.inner_text())
+        assert 0.8 < error < 1.05, f"hedging error {error} far from theory (~0.92)"
+        shot(page, "hedging")
+
         # Strategies: presets, editing, empty state.
         page.get_by_role("link", name="Strategies").click()
         expect(hero).to_have_text("16.02")  # long straddle debit
+        expect(page.get_by_text("Stress test: P&L by spot and volatility")).to_be_visible()
         page.get_by_role("button", name="Iron condor").click()
         expect(page.get_by_text("Net credit")).to_be_visible()
         expect(page.locator("fieldset")).to_have_count(4)
@@ -72,6 +90,7 @@ def main() -> int:
         expect(page.get_by_text("Add a leg to get started")).to_be_visible()
         page.get_by_role("button", name="Calendar spread").click()
         expect(page.get_by_text("0.25 yrs")).to_be_visible()  # horizon = front-month expiry
+        expect(page.get_by_text("Stress test: P&L by spot and volatility")).to_be_visible()
         shot(page, "strategies")
 
         # Routing: deep links and unknown paths.

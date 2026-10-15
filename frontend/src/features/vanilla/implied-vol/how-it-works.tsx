@@ -19,7 +19,9 @@ export function HowItWorks() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">How implied volatility works</CardTitle>
+        <CardTitle className="text-base" render={<h2 />}>
+          How implied volatility works
+        </CardTitle>
         <CardDescription>The model runs backwards: price in, volatility out.</CardDescription>
       </CardHeader>
       <CardPanel className="grid gap-6 pt-0 md:grid-cols-3">

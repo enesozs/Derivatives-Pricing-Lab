@@ -9,8 +9,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { MethodResult, PriceResponse } from '@/lib/api'
-import { fixed, milliseconds, scientific } from '@/lib/format'
+import { fixed, milliseconds, scientific, signed } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { GREEKS } from '../greeks'
 
 const STATUS: Record<
   MethodResult['status'],
@@ -21,13 +22,19 @@ const STATUS: Record<
   error: { label: 'Failed', variant: 'error' },
 }
 
+// Delta, gamma and vega show how differently each method estimates sensitivities.
+const SHOWN = GREEKS.filter((g) => ['delta', 'gamma', 'vega'].includes(g.key))
+
 export function MethodsTable({ data, stale }: { data: PriceResponse | undefined; stale: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Same option, three methods</CardTitle>
+        <CardTitle className="text-base" render={<h2 />}>
+          Same option, five methods
+        </CardTitle>
         <CardDescription>
-          Closed form, binomial tree and Monte Carlo should agree within their numerical error.
+          Closed form, two binomial trees, a PDE grid and Monte Carlo should agree within their
+          numerical error. Monte Carlo gamma uses the likelihood-ratio method, so it is noisier.
           {data && <> Reference: {data.reference_label}.</>}
         </CardDescription>
       </CardHeader>
@@ -38,7 +45,12 @@ export function MethodsTable({ data, stale }: { data: PriceResponse | undefined;
               <TableHead className="ps-4">Method</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead className="text-right">95% interval</TableHead>
-              <TableHead className="text-right">Error vs reference</TableHead>
+              <TableHead className="text-right">Error</TableHead>
+              {SHOWN.map((g) => (
+                <TableHead key={g.key} className="text-right">
+                  {g.symbol} {g.label}
+                </TableHead>
+              ))}
               <TableHead className="text-right">Runtime</TableHead>
               <TableHead className="pe-4 text-right">Status</TableHead>
             </TableRow>
@@ -58,9 +70,14 @@ export function MethodsTable({ data, stale }: { data: PriceResponse | undefined;
                   {fixed(m.value, 4)}
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground tabular-nums">
-                  {m.ci_low == null ? '—' : `${fixed(m.ci_low, 4)} – ${fixed(m.ci_high, 4)}`}
+                  {m.ci_low == null ? '—' : `${fixed(m.ci_low, 3)} – ${fixed(m.ci_high, 3)}`}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">{scientific(m.abs_error)}</TableCell>
+                {SHOWN.map((g) => (
+                  <TableCell key={g.key} className="text-right text-muted-foreground tabular-nums">
+                    {m.greeks ? signed(m.greeks[g.key] * g.scale, 4) : '—'}
+                  </TableCell>
+                ))}
                 <TableCell className="text-right text-muted-foreground tabular-nums">
                   {milliseconds(m.runtime_ms)}
                 </TableCell>

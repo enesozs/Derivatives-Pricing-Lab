@@ -60,3 +60,20 @@ class StrategyResponse(BaseModel):
     #: None means unbounded (the P&L keeps growing/falling as spot rises).
     max_profit: float | None
     max_loss: float | None
+
+
+class ScenarioRequest(StrategyRequest):
+    elapsed: float = Field(0.0, ge=0, description="Years from today at which to revalue")
+    vol_shifts: list[float] = Field(
+        default=[-0.10, -0.075, -0.05, -0.025, 0.0, 0.025, 0.05, 0.075, 0.10, 0.15, 0.20],
+        max_length=21,
+        description="Absolute volatility changes (0.05 = +5 vol points)",
+    )
+
+
+class ScenarioResponse(BaseModel):
+    elapsed: float
+    spots: list[float]
+    vol_shifts: list[float]
+    #: pnl[i][j]: P&L with volatility shifted by vol_shifts[i] at spots[j].
+    pnl: list[list[float]]

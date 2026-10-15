@@ -2,7 +2,7 @@ import pytest
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from derivlab import AnalyticEngine, BlackScholes, CRREngine, Market
+from derivlab import AnalyticEngine, BinomialEngine, BlackScholes, Market
 from derivlab.calibration import implied_volatility, price_bounds
 from tests.conftest import american, european
 
@@ -28,7 +28,7 @@ def test_round_trip_european(kind, strike, expiry, vol, q):
 
 
 def test_round_trip_american_with_tree(market):
-    engine = CRREngine(300)
+    engine = BinomialEngine(300)
     option = american("put")
     price = engine.price(option, market, BlackScholes(0.3)).value
     result = implied_volatility(price, option, market, engine)
@@ -51,4 +51,4 @@ def test_bounds(market):
 
 def test_deep_itm_american_put_at_intrinsic_is_not_identifiable(market):
     with pytest.raises(ValueError, match="not identifiable"):
-        implied_volatility(60.0, american("put", strike=160), market, CRREngine(200))
+        implied_volatility(60.0, american("put", strike=160), market, BinomialEngine(200))

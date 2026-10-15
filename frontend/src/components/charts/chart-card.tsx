@@ -16,7 +16,9 @@ export function ChartCard({ title, description, action, stale, children }: Chart
     <Card>
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <CardTitle className="text-base">{title}</CardTitle>
+          <CardTitle className="text-base" render={<h2 />}>
+            {title}
+          </CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
         {action}

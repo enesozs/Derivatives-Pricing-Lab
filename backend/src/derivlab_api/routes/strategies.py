@@ -1,18 +1,42 @@
 """Multi-leg option strategy endpoint."""
 
+from dataclasses import replace
+
 import numpy as np
 from fastapi import APIRouter
 from numpy.typing import NDArray
 
-from derivlab import AnalyticEngine, CRREngine, PricingEngine
-from derivlab.portfolio import horizon_values, strategy_value
+from derivlab import AnalyticEngine, BinomialEngine, PricingEngine
+from derivlab.portfolio import Strategy, horizon_values, strategy_value
 
-from ..schemas import GreeksOut, LegOut, StrategyRequest, StrategyResponse
+from ..schemas import (
+    GreeksOut,
+    LegOut,
+    ScenarioRequest,
+    ScenarioResponse,
+    StrategyRequest,
+    StrategyResponse,
+)
 
 router = APIRouter(prefix="/strategies", tags=["strategies"])
 
 GRID_POINTS = 121
-AMERICAN_TREE_STEPS = 100
+AMERICAN_TREE_STEPS = 101
+
+
+def _engine(strategy: Strategy) -> PricingEngine:
+    if any(p.option.is_american for p in strategy.positions):
+        return BinomialEngine(AMERICAN_TREE_STEPS, "leisen-reimer")
+    return AnalyticEngine()
+
+
+def _engine_label(engine: PricingEngine) -> str:
+    return engine.label if isinstance(engine, BinomialEngine) else "Black–Scholes"
+
+
+def _spot_grid(strategy: Strategy, spot: float, points: int) -> NDArray[np.float64]:
+    levels = [p.option.payoff.strike for p in strategy.positions] + [spot]
+    return np.linspace(max(0.5 * min(levels), 0.01), 1.5 * max(levels), points)
 
 
 def _breakevens(spots: NDArray[np.float64], pnl: NDArray[np.float64]) -> list[float]:
@@ -30,15 +54,11 @@ def _breakevens(spots: NDArray[np.float64], pnl: NDArray[np.float64]) -> list[fl
 @router.post("/analyze")
 def analyze(req: StrategyRequest) -> StrategyResponse:
     strategy, market, model = req.build()
-    engine: PricingEngine
-    if any(p.option.is_american for p in strategy.positions):
-        engine, label = CRREngine(AMERICAN_TREE_STEPS), f"CRR tree · {AMERICAN_TREE_STEPS} steps"
-    else:
-        engine, label = AnalyticEngine(), "Black–Scholes"
+    engine = _engine(strategy)
+    label = _engine_label(engine)
 
     total, legs = strategy_value(strategy, market, model, engine)
-    levels = [p.option.payoff.strike for p in strategy.positions] + [market.spot]
-    spots = np.linspace(max(0.5 * min(levels), 0.01), 1.5 * max(levels), GRID_POINTS)
+    spots = _spot_grid(strategy, market.spot, GRID_POINTS)
 
     horizon = strategy.horizon
     pnl_today = horizon_values(strategy, market, model, engine, spots, 0.0) - total.value
@@ -71,4 +91,23 @@ def analyze(req: StrategyRequest) -> StrategyResponse:
         breakevens=_breakevens(spots, pnl_horizon),
         max_profit=max_profit,
         max_loss=max_loss,
+    )
+
+
+@router.post("/scenarios")
+def scenarios(req: ScenarioRequest) -> ScenarioResponse:
+    """P&L across spot and volatility shifts at a chosen date: a stress-test grid."""
+    strategy, market, model = req.build()
+    engine = _engine(strategy)
+    elapsed = min(req.elapsed, strategy.horizon)
+    cost = strategy_value(strategy, market, model, engine)[0].value
+    spots = _spot_grid(strategy, market.spot, 25)
+    pnl = []
+    for shift in req.vol_shifts:
+        shocked = replace(model, volatility=max(model.volatility + shift, 0.01))
+        pnl.append(
+            (horizon_values(strategy, market, shocked, engine, spots, elapsed) - cost).tolist()
+        )
+    return ScenarioResponse(
+        elapsed=elapsed, spots=spots.tolist(), vol_shifts=req.vol_shifts, pnl=pnl
     )

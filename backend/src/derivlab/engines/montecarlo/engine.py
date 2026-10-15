@@ -6,19 +6,27 @@ Error: statistical, O(1/sqrt(paths)); reported as a standard error.
   from pair averages, because the two halves are not independent.
 - Control variate: the discounted terminal spot, whose expectation S*exp(-qT) is known
   exactly. The regression coefficient is estimated from the same sample (small bias, O(1/n)).
-Reference: Glasserman, Monte Carlo Methods in Financial Engineering, ch. 4.
+
+Greeks are estimated from the same paths (no re-simulation):
+- Pathwise (delta, vega, rho, theta): differentiate each path's discounted payoff with respect
+  to the parameter. Valid because the vanilla payoff is continuous in S_T.
+- Likelihood ratio (gamma): the payoff's second derivative is a spike at the strike, so instead
+  differentiate the density of S_T: gamma = E[disc * payoff * (Z^2 - 1 - Z sigma sqrt(T))]
+  / (S0^2 sigma^2 T). Unbiased but noticeably noisier, which the UI makes visible.
+Reference: Glasserman, Monte Carlo Methods in Financial Engineering, ch. 4 and 7.
 """
 
 import math
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from derivlab.core.errors import UnsupportedError
 from derivlab.instruments import VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes
-from derivlab.results import PricingResult
+from derivlab.results import Greeks, PricingResult
 
 from .paths import gbm_paths
 
@@ -30,6 +38,7 @@ class MonteCarloEngine:
     seed: int = 42
     antithetic: bool = True
     control_variate: bool = True
+    greeks: bool = True
 
     def price(self, option: VanillaOption, market: Market, model: BlackScholes) -> PricingResult:
         if option.is_american:
@@ -45,6 +54,12 @@ class MonteCarloEngine:
         terminal = spots[:, -1]
         discount = market.discount(t)
         samples = discount * option.payoff(terminal)
+
+        greeks = (
+            self._greeks(option, market, model, terminal, samples)
+            if self.greeks and model.volatility > 0
+            else None
+        )
 
         if self.control_variate:
             control = discount * terminal
@@ -64,5 +79,31 @@ class MonteCarloEngine:
         return PricingResult(
             float(np.mean(samples)),
             stderr=stderr,
+            greeks=greeks,
             diagnostics={"paths": self.paths, "steps": self.steps, "seed": self.seed},
         )
+
+    @staticmethod
+    def _greeks(
+        option: VanillaOption,
+        market: Market,
+        model: BlackScholes,
+        terminal: NDArray[np.float64],
+        discounted_payoff: NDArray[np.float64],
+    ) -> Greeks:
+        s0, t, sigma = market.spot, option.expiry, model.volatility
+        r, q = market.rate, market.dividend_yield
+        discount = market.discount(t)
+        sign = option.payoff.sign
+        # d(payoff)/d(S_T): +1 for an in-the-money call, -1 for an in-the-money put, else 0.
+        slope = discount * sign * (sign * (terminal - option.payoff.strike) > 0)
+        log_return = np.log(terminal / s0)
+        z = (log_return - (r - q - 0.5 * sigma**2) * t) / (sigma * math.sqrt(t))
+
+        delta = slope * terminal / s0
+        vega = slope * terminal * (log_return - (r - q + 0.5 * sigma**2) * t) / sigma
+        gamma = discounted_payoff * (z * z - 1 - z * sigma * math.sqrt(t)) / (s0**2 * sigma**2 * t)
+        rho = -t * discounted_payoff + slope * terminal * t
+        d_terminal_dt = terminal * ((r - q - 0.5 * sigma**2) + sigma * z / (2 * math.sqrt(t)))
+        theta = r * discounted_payoff - slope * d_terminal_dt  # theta = -dV/dT
+        return Greeks(*(float(np.mean(g)) for g in (delta, gamma, vega, theta, rho)))

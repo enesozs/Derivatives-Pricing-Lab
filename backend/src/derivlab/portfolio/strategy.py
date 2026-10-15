@@ -15,7 +15,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from derivlab.engines import PricingEngine
-from derivlab.instruments import American, European, VanillaOption
+from derivlab.instruments import VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes
 from derivlab.results import Greeks, PricingResult
@@ -70,12 +70,6 @@ def strategy_value(
     return PricingResult(value, greeks=greeks), legs
 
 
-def _age(option: VanillaOption, elapsed: float) -> VanillaOption:
-    remaining = max(option.expiry - elapsed, 0.0)
-    exercise = American(remaining) if option.is_american else European(remaining)
-    return replace(option, exercise=exercise)
-
-
 def horizon_values(
     strategy: Strategy,
     market: Market,
@@ -85,7 +79,7 @@ def horizon_values(
     elapsed: float,
 ) -> NDArray[np.float64]:
     """Strategy value at each spot after `elapsed` years, all else unchanged."""
-    aged = [replace(p, option=_age(p.option, elapsed)) for p in strategy.positions]
+    aged = [replace(p, option=p.option.aged(elapsed)) for p in strategy.positions]
     values = []
     for s in spots:
         shifted = replace(market, spot=float(s))

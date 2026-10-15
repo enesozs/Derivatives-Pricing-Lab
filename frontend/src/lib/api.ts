@@ -18,6 +18,8 @@ export interface VanillaInputs {
 
 export interface PriceRequest extends VanillaInputs {
   tree_steps: number
+  /** PDE space steps; time steps are half of this. */
+  pde_space_steps: number
   mc_paths: number
   seed: number
 }
@@ -30,7 +32,7 @@ export interface Greeks {
   rho: number
 }
 
-export type MethodId = 'analytic' | 'crr' | 'monte_carlo'
+export type MethodId = 'analytic' | 'crr' | 'leisen_reimer' | 'pde' | 'monte_carlo'
 
 export interface MethodResult {
   method: MethodId
@@ -42,6 +44,7 @@ export interface MethodResult {
   ci_high: number | null
   abs_error: number | null
   runtime_ms: number | null
+  greeks: Greeks | null
   note: string | null
 }
 
@@ -65,12 +68,95 @@ export interface ProfileResponse {
   rho: (number | null)[]
 }
 
+export interface ConvergencePoint {
+  /** Tree steps, or PDE space steps. */
+  steps: number
+  value: number
+  abs_error: number
+}
+
 export interface ConvergenceResponse {
   reference: number
   reference_label: string
-  lattice: { steps: number; value: number; abs_error: number }[]
+  crr: ConvergencePoint[]
+  leisen_reimer: ConvergencePoint[]
+  pde: ConvergencePoint[]
   monte_carlo: { paths: number; value: number; stderr: number }[]
   monte_carlo_note: string | null
+}
+
+export type TreeScheme = 'crr' | 'jarrow-rudd' | 'leisen-reimer'
+
+export interface TreeRequest extends VanillaInputs {
+  steps: number
+  scheme: TreeScheme
+}
+
+export interface TreeNode {
+  level: number
+  index: number
+  spot: number
+  value: number
+  exercised: boolean
+}
+
+export interface TreeResponse {
+  steps: number
+  dt: number
+  up: number
+  down: number
+  probability: number
+  nodes: TreeNode[]
+}
+
+export interface PDEGridResponse {
+  spots: number[]
+  payoff: number[]
+  slices: { time: number; values: number[] }[]
+  boundary_times: number[]
+  boundary_spots: (number | null)[]
+}
+
+export interface HedgeRequest {
+  kind: OptionKind
+  strike: number
+  expiry: number
+  spot: number
+  rate: number
+  dividend_yield: number
+  realised_volatility: number
+  hedge_volatility: number
+  position: 'short' | 'long'
+  rebalances: number
+  cost_bps: number
+  paths: number
+  seed: number
+}
+
+export interface Distribution {
+  mean: number
+  std: number
+  p05: number
+  p95: number
+}
+
+export interface HedgeResponse {
+  premium: number
+  hedged: Distribution
+  unhedged: Distribution
+  approx_std: number
+  mean_cost: number
+  histogram: { edges: number[]; counts: number[] }
+  sample_times: number[]
+  sample_spots: number[][]
+  sample_pnl: number[][]
+  frequency: {
+    rebalances: number
+    mean: number
+    std: number
+    approx_std: number
+    mean_cost: number
+  }[]
 }
 
 export interface ImpliedVolRequest {
@@ -132,6 +218,19 @@ export interface StrategyResponse {
   max_loss: number | null
 }
 
+export interface ScenarioRequest extends StrategyRequest {
+  /** Years from today at which to revalue. */
+  elapsed: number
+}
+
+export interface ScenarioResponse {
+  elapsed: number
+  spots: number[]
+  vol_shifts: number[]
+  /** pnl[i][j]: P&L with volatility shifted by vol_shifts[i] at spots[j]. */
+  pnl: number[][]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -167,4 +266,12 @@ export const api = {
     post<ImpliedVolResponse>('/vanilla/implied-vol', req, signal),
   strategy: (req: StrategyRequest, signal?: AbortSignal) =>
     post<StrategyResponse>('/strategies/analyze', req, signal),
+  scenarios: (req: ScenarioRequest, signal?: AbortSignal) =>
+    post<ScenarioResponse>('/strategies/scenarios', req, signal),
+  tree: (req: TreeRequest, signal?: AbortSignal) =>
+    post<TreeResponse>('/vanilla/tree', req, signal),
+  pdeGrid: (req: VanillaInputs, signal?: AbortSignal) =>
+    post<PDEGridResponse>('/vanilla/pde-grid', req, signal),
+  deltaHedge: (req: HedgeRequest, signal?: AbortSignal) =>
+    post<HedgeResponse>('/hedging/delta', req, signal),
 }

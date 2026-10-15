@@ -1,58 +1,66 @@
 """Vanilla option endpoints."""
 
+import math
 import time
 from collections.abc import Callable
-from typing import Literal
 
 import numpy as np
 from fastapi import APIRouter
 
 from derivlab import (
     AnalyticEngine,
+    BinomialEngine,
     BlackScholes,
-    CRREngine,
+    FiniteDifferenceEngine,
     MonteCarloEngine,
     PricingEngine,
     PricingResult,
     UnsupportedError,
 )
 from derivlab.calibration import implied_volatility, price_bounds
+from derivlab.engines.lattice import tree_nodes
+from derivlab.engines.pde import solve_pde
 from derivlab.research import (
-    REFERENCE_TREE_STEPS,
+    REFERENCE_LABEL_AMERICAN,
+    REFERENCE_LABEL_EUROPEAN,
     lattice_convergence,
     monte_carlo_convergence,
+    pde_convergence,
     reference_value,
     spot_profile,
 )
 
 from ..schemas import (
+    ConvergencePointOut,
     ConvergenceResponse,
     GreeksOut,
     ImpliedVolRequest,
     ImpliedVolResponse,
-    LatticePointOut,
     MethodResult,
     MonteCarloPointOut,
+    PDEGridResponse,
+    PDESliceOut,
     PriceRequest,
     PriceResponse,
     ProfileResponse,
+    TreeNodeOut,
+    TreeRequest,
+    TreeResponse,
     VanillaInputs,
 )
+from ..schemas.vanilla import MethodId
 
 router = APIRouter(prefix="/vanilla", tags=["vanilla"])
 
-PROFILE_TREE_STEPS = 200
+PROFILE_TREE_STEPS = 201
 
 
 def _reference_label(american: bool) -> str:
-    return f"CRR · {REFERENCE_TREE_STEPS:,} steps" if american else "Black–Scholes closed form"
+    return REFERENCE_LABEL_AMERICAN if american else REFERENCE_LABEL_EUROPEAN
 
 
 def _run(
-    method: Literal["analytic", "crr", "monte_carlo"],
-    label: str,
-    price: Callable[[], PricingResult],
-    reference: float,
+    method: MethodId, label: str, price: Callable[[], PricingResult], reference: float
 ) -> tuple[MethodResult, PricingResult | None]:
     start = time.perf_counter()
     try:
@@ -74,6 +82,7 @@ def _run(
             ci_high=ci[1] if ci else None,
             abs_error=abs(result.value - reference),
             runtime_ms=runtime,
+            greeks=GreeksOut.of(result.greeks),
         ),
         result,
     )
@@ -83,34 +92,38 @@ def _run(
 def price(req: PriceRequest) -> PriceResponse:
     option, market, model = req.build()
     reference = reference_value(option, market, model)
+    crr = BinomialEngine(req.tree_steps, "crr")
+    lr = BinomialEngine(req.tree_steps, "leisen-reimer")
+    pde = FiniteDifferenceEngine(req.pde_space_steps, req.pde_space_steps // 2)
+    mc = MonteCarloEngine(paths=req.mc_paths, seed=req.seed)
 
-    analytic, analytic_result = _run(
-        "analytic",
-        "Black–Scholes",
-        lambda: AnalyticEngine().price(option, market, model),
-        reference,
-    )
-    crr, crr_result = _run(
-        "crr",
-        f"CRR tree · {req.tree_steps:,} steps",
-        lambda: CRREngine(req.tree_steps).price(option, market, model),
-        reference,
-    )
-    mc, _ = _run(
-        "monte_carlo",
-        f"Monte Carlo · {req.mc_paths:,} paths",
-        lambda: MonteCarloEngine(paths=req.mc_paths, seed=req.seed).price(option, market, model),
-        reference,
-    )
-
-    greeks_source = analytic_result if analytic_result is not None else crr_result
-    greeks_label = "Analytic" if analytic_result is not None else crr.label
+    runs = [
+        _run(
+            "analytic",
+            "Black–Scholes",
+            lambda: AnalyticEngine().price(option, market, model),
+            reference,
+        ),
+        _run("crr", crr.label, lambda: crr.price(option, market, model), reference),
+        _run("leisen_reimer", lr.label, lambda: lr.price(option, market, model), reference),
+        _run("pde", pde.label, lambda: pde.price(option, market, model), reference),
+        _run(
+            "monte_carlo",
+            f"Monte Carlo · {req.mc_paths:,} paths",
+            lambda: mc.price(option, market, model),
+            reference,
+        ),
+    ]
+    by_method = {m.method: (m, r) for m, r in runs}
+    # Headline Greeks: exact when there is a closed form, otherwise the smooth Leisen–Reimer tree.
+    source = "analytic" if by_method["analytic"][1] is not None else "leisen_reimer"
+    source_row, source_result = by_method[source]
     return PriceResponse(
         reference=reference,
         reference_label=_reference_label(option.is_american),
-        greeks=GreeksOut.of(greeks_source.greeks if greeks_source else None),
-        greeks_label=greeks_label,
-        methods=[analytic, crr, mc],
+        greeks=GreeksOut.of(source_result.greeks if source_result else None),
+        greeks_label="Analytic" if source == "analytic" else source_row.label,
+        methods=[m for m, _ in runs],
     )
 
 
@@ -119,8 +132,10 @@ def profile(req: VanillaInputs) -> ProfileResponse:
     option, market, model = req.build()
     low = 0.5 * min(req.spot, req.strike)
     high = 1.5 * max(req.spot, req.strike)
+    engine: PricingEngine
     if option.is_american:
-        engine, label, n = CRREngine(PROFILE_TREE_STEPS), f"CRR · {PROFILE_TREE_STEPS} steps", 61
+        tree = BinomialEngine(PROFILE_TREE_STEPS, "leisen-reimer")
+        engine, label, n = tree, tree.label, 61
     else:
         engine, label, n = AnalyticEngine(), "Black–Scholes", 121
     points = spot_profile(engine, option, market, model, np.linspace(low, high, n))
@@ -145,10 +160,12 @@ def profile(req: VanillaInputs) -> ProfileResponse:
 def convergence(req: VanillaInputs) -> ConvergenceResponse:
     option, market, model = req.build()
     reference = reference_value(option, market, model)
-    lattice = [
-        LatticePointOut(steps=p.steps, value=p.value, abs_error=p.abs_error)
-        for p in lattice_convergence(option, market, model, reference)
-    ]
+
+    def out(points) -> list[ConvergencePointOut]:
+        return [
+            ConvergencePointOut(steps=p.steps, value=p.value, abs_error=p.abs_error) for p in points
+        ]
+
     monte_carlo: list[MonteCarloPointOut] = []
     note = None
     try:
@@ -161,7 +178,18 @@ def convergence(req: VanillaInputs) -> ConvergenceResponse:
     return ConvergenceResponse(
         reference=reference,
         reference_label=_reference_label(option.is_american),
-        lattice=lattice,
+        crr=out(lattice_convergence(option, market, model, reference, "crr")),
+        leisen_reimer=out(
+            lattice_convergence(
+                option,
+                market,
+                model,
+                reference,
+                "leisen-reimer",
+                (11, 21, 41, 81, 161, 321, 641, 1281),
+            )
+        ),
+        pde=out(pde_convergence(option, market, model, reference)),
         monte_carlo=monte_carlo,
         monte_carlo_note=note,
     )
@@ -172,7 +200,8 @@ def implied_vol(req: ImpliedVolRequest) -> ImpliedVolResponse:
     option, market = req.build()
     engine: PricingEngine
     if option.is_american:
-        engine, label = CRREngine(req.tree_steps), f"CRR tree · {req.tree_steps} steps"
+        tree = BinomialEngine(req.tree_steps, "leisen-reimer", greeks=False)
+        engine, label = tree, tree.label
     else:
         engine, label = AnalyticEngine(), "Black–Scholes"
     lower, upper = price_bounds(option, market)
@@ -186,7 +215,9 @@ def implied_vol(req: ImpliedVolRequest) -> ImpliedVolResponse:
 
     # Price-vs-volatility curve; tree engines cannot price at tiny volatilities, so skip those.
     top = max(1.5, 1.5 * sigma) if sigma else 1.5
-    curve_engine = CRREngine(150) if option.is_american else engine
+    curve_engine = (
+        BinomialEngine(151, "leisen-reimer", greeks=False) if option.is_american else engine
+    )
     vols, prices = [], []
     for v in np.linspace(0.01, top, 75):
         try:
@@ -205,4 +236,66 @@ def implied_vol(req: ImpliedVolRequest) -> ImpliedVolResponse:
         price_upper=upper,
         curve_vols=vols,
         curve_prices=prices,
+    )
+
+
+@router.post("/tree")
+def tree(req: TreeRequest) -> TreeResponse:
+    option, market, model = req.build()
+    params, nodes = tree_nodes(option, market, model, req.steps, req.scheme)
+    return TreeResponse(
+        steps=params.steps,
+        dt=params.dt,
+        up=params.up,
+        down=params.down,
+        probability=params.probability,
+        nodes=[
+            TreeNodeOut(
+                level=n.level, index=n.index, spot=n.spot, value=n.value, exercised=n.exercised
+            )
+            for n in nodes
+        ],
+    )
+
+
+@router.post("/pde-grid")
+def pde_grid(req: VanillaInputs) -> PDEGridResponse:
+    option, market, model = req.build()
+    *_, grid = solve_pde(option, market, model, 400, 200, keep_grid=True)
+    assert grid is not None
+    t = option.expiry
+    low = 0.4 * min(req.spot, req.strike)
+    high = 1.8 * max(req.spot, req.strike)
+    keep = (grid.spots >= low) & (grid.spots <= high)
+    spots = grid.spots[keep]
+    stride = max(1, math.ceil(len(spots) / 160))
+    spots = spots[::stride]
+    times = t - grid.taus  # calendar time from today
+
+    slices = []
+    for fraction in (0.0, 0.5, 0.75, 0.9, 0.98):
+        i = int(np.argmin(np.abs(times - fraction * t)))
+        slices.append(
+            PDESliceOut(time=float(times[i]), values=grid.values[i][keep][::stride].tolist())
+        )
+
+    boundary_times: list[float] = []
+    boundary_spots: list[float | None] = []
+    if option.is_american:
+        for i in range(1, len(grid.taus)):
+            exercised = grid.exercised[i]
+            boundary_times.append(float(times[i]))
+            if not exercised.any():
+                boundary_spots.append(None)
+            elif option.payoff.kind == "put":
+                boundary_spots.append(float(grid.spots[exercised].max()))
+            else:
+                boundary_spots.append(float(grid.spots[exercised].min()))
+
+    return PDEGridResponse(
+        spots=spots.tolist(),
+        payoff=option.payoff(spots).tolist(),
+        slices=slices,
+        boundary_times=boundary_times,
+        boundary_spots=boundary_spots,
     )

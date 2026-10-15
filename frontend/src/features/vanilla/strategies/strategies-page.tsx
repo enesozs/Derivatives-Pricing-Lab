@@ -8,6 +8,7 @@ import { api } from '@/lib/api'
 import { LegsTable } from './legs-table'
 import { DEFAULT_STRATEGY, toRequest } from './params'
 import { PnlChart } from './pnl-chart'
+import { ScenarioHeatmap } from './scenario-heatmap'
 import { StrategyPanel } from './strategy-panel'
 import { StrategySummary } from './strategy-summary'
 
@@ -51,6 +52,11 @@ export default function StrategiesPage() {
             spot={settled.spot}
             data={empty ? undefined : query.data}
             stale={query.isPlaceholderData}
+          />
+          <ScenarioHeatmap
+            request={request}
+            horizon={query.data?.horizon ?? 0}
+            enabled={!empty && query.isSuccess}
           />
           <LegsTable
             params={settled}

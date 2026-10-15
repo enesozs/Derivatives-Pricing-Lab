@@ -1,4 +1,4 @@
-import type { OptionKind, StrategyRequest } from '@/lib/api'
+import type { ExerciseStyle, OptionKind, StrategyRequest } from '@/lib/api'
 
 export type Side = 'long' | 'short'
 
@@ -6,6 +6,7 @@ export interface Leg {
   id: number
   side: Side
   kind: OptionKind
+  exercise: ExerciseStyle
   strike: number
   expiry: number
   /** Number of options, always positive; `side` carries the sign. */
@@ -27,7 +28,7 @@ let nextId = 1
 export const newLegId = () => nextId++
 
 function leg(side: Side, kind: OptionKind, strike: number, quantity = 1, expiry = 1): Leg {
-  return { id: newLegId(), side, kind, strike, expiry, quantity }
+  return { id: newLegId(), side, kind, exercise: 'european', strike, expiry, quantity }
 }
 
 interface Preset {
@@ -127,7 +128,7 @@ export function toRequest(p: StrategyParams): StrategyRequest {
     underlying_quantity: p.underlying,
     legs: p.legs.map((l) => ({
       kind: l.kind,
-      exercise: 'european',
+      exercise: l.exercise,
       strike: l.strike,
       expiry: l.expiry,
       quantity: l.side === 'long' ? l.quantity : -l.quantity,
@@ -138,5 +139,6 @@ export function toRequest(p: StrategyParams): StrategyRequest {
 export function describeLeg(l: Leg): string {
   const side = l.side === 'long' ? 'Long' : 'Short'
   const kind = l.kind === 'call' ? 'call' : 'put'
-  return `${side} ${l.quantity} × ${l.strike} ${kind} · ${l.expiry.toFixed(2)}y`
+  const style = l.exercise === 'american' ? ' (American)' : ''
+  return `${side} ${l.quantity} × ${l.strike} ${kind}${style} · ${l.expiry.toFixed(2)}y`
 }

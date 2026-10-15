@@ -2,7 +2,13 @@ import { Navigate, Route, Routes } from 'react-router'
 import { AppShell } from '@/components/app-shell'
 import NotFound from '@/components/not-found'
 import { VanillaLayout } from '@/features/vanilla/layout'
-import { ImpliedVolPage, PricerPage, StrategiesPage } from '@/features/vanilla/pages'
+import {
+  HedgingPage,
+  ImpliedVolPage,
+  MethodsPage,
+  PricerPage,
+  StrategiesPage,
+} from '@/features/vanilla/pages'
 
 export default function App() {
   return (
@@ -12,7 +18,9 @@ export default function App() {
         <Route path="vanilla" element={<VanillaLayout />}>
           <Route index element={<PricerPage />} />
           <Route path="implied-vol" element={<ImpliedVolPage />} />
+          <Route path="methods" element={<MethodsPage />} />
           <Route path="strategies" element={<StrategiesPage />} />
+          <Route path="hedging" element={<HedgingPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

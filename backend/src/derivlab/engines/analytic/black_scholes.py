@@ -8,6 +8,10 @@ Reference: Hull, Options, Futures, and Other Derivatives, ch. 15 and 19.
 import math
 from dataclasses import dataclass
 
+import numpy as np
+from numpy.typing import NDArray
+from scipy.special import ndtr
+
 from derivlab.core.errors import UnsupportedError
 from derivlab.core.stats import norm_cdf, norm_pdf
 from derivlab.instruments import VanillaOption
@@ -57,3 +61,29 @@ class AnalyticEngine:
             rho=sign * strike * t * market.discount(t) * norm_cdf(sign * d2),
         )
         return PricingResult(value, greeks=greeks)
+
+
+def black_scholes_arrays(
+    spot: NDArray[np.float64],
+    strike: float,
+    tau: float,
+    rate: float,
+    dividend_yield: float,
+    volatility: float,
+    sign: int,
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Vectorised European value and delta over many spots (used by hedging simulations).
+
+    `sign` is +1 for a call and -1 for a put. At tau = 0 returns the payoff and its slope.
+    """
+    if tau <= 0:
+        intrinsic = np.maximum(sign * (spot - strike), 0.0)
+        return intrinsic, np.where(sign * (spot - strike) > 0, float(sign), 0.0)
+    width = volatility * math.sqrt(tau)
+    d1 = (np.log(spot / strike) + (rate - dividend_yield + 0.5 * volatility**2) * tau) / width
+    d2 = d1 - width
+    carry = math.exp(-dividend_yield * tau)
+    discount = math.exp(-rate * tau)
+    value = sign * (spot * carry * ndtr(sign * d1) - strike * discount * ndtr(sign * d2))
+    delta = sign * carry * ndtr(sign * d1)
+    return value, delta

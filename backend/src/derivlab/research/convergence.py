@@ -3,17 +3,26 @@
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from derivlab.engines import AnalyticEngine, CRREngine, MonteCarloEngine
+from derivlab.engines import (
+    AnalyticEngine,
+    BinomialEngine,
+    FiniteDifferenceEngine,
+    MonteCarloEngine,
+)
+from derivlab.engines.lattice import Scheme
 from derivlab.instruments import VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes
 
-# American options have no closed form; a very fine tree stands in as the benchmark.
-REFERENCE_TREE_STEPS = 5000
+# American options have no closed form; a fine Leisen–Reimer tree stands in as the benchmark.
+REFERENCE_STEPS = 4001
+REFERENCE_LABEL_AMERICAN = f"Leisen–Reimer tree · {REFERENCE_STEPS:,} steps"
+REFERENCE_LABEL_EUROPEAN = "Black–Scholes closed form"
 
 
 @dataclass(frozen=True)
-class LatticePoint:
+class ConvergencePoint:
+    #: Tree steps, or PDE space steps (time steps are half of that).
     steps: int
     value: float
     abs_error: float
@@ -27,9 +36,9 @@ class MonteCarloPoint:
 
 
 def reference_value(option: VanillaOption, market: Market, model: BlackScholes) -> float:
-    """Closed form for European options, a 5000-step CRR tree for American ones."""
     if option.is_american:
-        return CRREngine(REFERENCE_TREE_STEPS).price(option, market, model).value
+        engine = BinomialEngine(REFERENCE_STEPS, "leisen-reimer", greeks=False)
+        return engine.price(option, market, model).value
     return AnalyticEngine().price(option, market, model).value
 
 
@@ -38,12 +47,27 @@ def lattice_convergence(
     market: Market,
     model: BlackScholes,
     reference: float,
+    scheme: Scheme = "crr",
     steps: Iterable[int] = (10, 20, 40, 80, 160, 320, 640, 1280),
-) -> list[LatticePoint]:
+) -> list[ConvergencePoint]:
     points = []
     for n in steps:
-        value = CRREngine(n).price(option, market, model).value
-        points.append(LatticePoint(n, value, abs(value - reference)))
+        result = BinomialEngine(n, scheme, greeks=False).price(option, market, model)
+        points.append(ConvergencePoint(n, result.value, abs(result.value - reference)))
+    return points
+
+
+def pde_convergence(
+    option: VanillaOption,
+    market: Market,
+    model: BlackScholes,
+    reference: float,
+    space_steps: Iterable[int] = (40, 80, 160, 320, 640),
+) -> list[ConvergencePoint]:
+    points = []
+    for n in space_steps:
+        result = FiniteDifferenceEngine(n, n // 2, greeks=False).price(option, market, model)
+        points.append(ConvergencePoint(n, result.value, abs(result.value - reference)))
     return points
 
 
@@ -57,6 +81,6 @@ def monte_carlo_convergence(
     """Estimates at increasing path counts; each uses an independent stream (seed + i)."""
     points = []
     for i, n in enumerate(paths):
-        result = MonteCarloEngine(paths=n, seed=seed + i).price(option, market, model)
+        result = MonteCarloEngine(paths=n, seed=seed + i, greeks=False).price(option, market, model)
         points.append(MonteCarloPoint(n, result.value, result.stderr or 0.0))
     return points

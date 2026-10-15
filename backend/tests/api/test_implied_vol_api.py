@@ -17,7 +17,7 @@ def test_american_uses_tree():
     body = client.post(
         "/api/vanilla/implied-vol", json={"kind": "put", "exercise": "american", "price": 6.09}
     ).json()
-    assert body["engine_label"].startswith("CRR")
+    assert body["engine_label"].startswith("Leisen–Reimer")
     assert body["implied_vol"] == pytest.approx(0.20, abs=2e-3)
 
 

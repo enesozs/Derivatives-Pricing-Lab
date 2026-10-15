@@ -19,7 +19,7 @@ export default function PricerPage() {
   return (
     <>
       <PageHeader title="Vanilla option pricer">
-        Price a call or put with three independent methods, see how its value and Greeks respond to
+        Price a call or put with five independent methods, see how its value and Greeks respond to
         the market, and watch the numerical methods converge.
       </PageHeader>
       <div className="grid gap-6 lg:grid-cols-[20rem_minmax(0,1fr)]">

@@ -51,3 +51,23 @@ def test_covered_call_and_calendar():
 def test_too_many_legs_rejected():
     response = client.post("/api/strategies/analyze", json={"legs": [leg("call", 100, 1)] * 9})
     assert response.status_code == 422
+
+
+def test_american_legs_use_a_tree():
+    body = analyze(legs=[{**leg("put", 100, 1), "exercise": "american"}])
+    assert body["engine_label"].startswith("Leisen–Reimer")
+
+
+def test_scenario_grid():
+    response = client.post(
+        "/api/strategies/scenarios",
+        json={"legs": [leg("call", 100, 1), leg("put", 100, 1)], "elapsed": 0.25},
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert len(body["pnl"]) == len(body["vol_shifts"])
+    assert all(len(row) == len(body["spots"]) for row in body["pnl"])
+    # A long straddle gains when volatility rises: compare the middle column across shifts.
+    mid = len(body["spots"]) // 2
+    column = [row[mid] for row in body["pnl"]]
+    assert column == sorted(column)

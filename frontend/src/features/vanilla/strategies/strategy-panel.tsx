@@ -33,7 +33,15 @@ export function StrategyPanel({ params, onChange }: StrategyPanelProps) {
     edit({
       legs: [
         ...params.legs,
-        { id: newLegId(), side: 'long', kind: 'call', strike, expiry: 1, quantity: 1 },
+        {
+          id: newLegId(),
+          side: 'long',
+          kind: 'call',
+          exercise: 'european',
+          strike,
+          expiry: 1,
+          quantity: 1,
+        },
       ],
     })
   }
@@ -58,7 +66,10 @@ export function StrategyPanel({ params, onChange }: StrategyPanelProps) {
         </div>
       </PanelSection>
       <Separator />
-      <PanelSection title="Legs" hint="European options. Buy = long, Sell = short.">
+      <PanelSection
+        title="Legs"
+        hint="Buy = long, Sell = short. American legs are priced on a tree."
+      >
         <div className="flex flex-col gap-2">
           {params.legs.map((leg, i) => (
             <LegEditor
