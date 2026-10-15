@@ -29,7 +29,8 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0–5 are complete.** Next up: Phase 6 (structured products).
+- **Phases 0–6 are complete.** The roadmap's core is done; §5 lists optional extensions
+  (credit, xVA) and the deferred items worth revisiting.
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -66,6 +67,20 @@ should explain *why*, not just *what*.
   - **Short-rate models** (`/rates/models`): Hull–White vs Vasicek fans and curve fit; European
     swaption (Jamshidian vs trinomial tree) and Bermudan; Hull–White calibration to cap vols.
   - See `docs/05-rates.md`.
+- **Structured** area, 5 pages (underlying starts at 100; values in % of notional):
+  - **Autocallables** (`/structured`): single or worst-of-3, memory coupons, protection at
+    maturity or daily; value, fair coupon, redemption-date probabilities, return distribution,
+    fair coupon vs volatility and vs correlation. Black–Scholes or Heston (single asset).
+  - **Reverse convertibles** (`/structured/reverse-convertible`): plain or barrier; bond +
+    coupons − put decomposition, fair coupon, touch probability, payoff at maturity.
+  - **Cliquets** (`/structured/cliquet`): local cap/floor, global floor; Black–Scholes vs Heston
+    (forward-smile model risk), closed form when no global bound binds; forward-start option.
+  - **Variance swaps** (`/structured/variance`): 1/K² option-strip replication (COS) vs exact
+    expected variance under BS/Heston/Merton; strike-spacing convergence; jump bias; simulated
+    realised vol and the volatility-swap convexity adjustment.
+  - **Portfolio risk** (`/structured/risk`): editable book of options, barriers and notes;
+    bump-and-revalue Greeks, spot × vol stress grid, scenarios (full revaluation vs Taylor).
+  - See `docs/06-structured.md`.
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -98,14 +113,23 @@ should explain *why*, not just *what*.
   `black` / `bachelier` / `implied_vol`, `CapFloor`, `Swaption`, `Vasicek`, `HullWhite`
   (Jamshidian bond options, caps, swaptions; simulation), `calibrate_hull_white_to_caps`,
   trinomial `build_tree` and `bermudan_swaption`.
-- Tests: 337 backend tests, with QuantLib cross-checks for:
+- Structured (`derivlab.structured`): `Autocallable` + `price_autocallable` /
+  `price_worst_of_autocallable` (batched Monte Carlo, V = A + cB gives the fair coupon),
+  `ReverseConvertible` (decomposition via `_common.price_instrument`: closed form → COS → MC),
+  `ForwardStartOption`, `Cliquet` (+ Black–Scholes closed forms), `replicate_variance`,
+  `expected_variance`, `simulate_realised_variance`. Note pricers take a `reference` (initial
+  fixing) separate from today's spot, so shocks move a note's performance.
+- Portfolio risk (`derivlab.risk.portfolio`): `Position`, `Scenario`, `shock` (BS/Heston),
+  `revalue`, `portfolio_risk`, `stress_grid`, `scenario_report`, `STRESS_SCENARIOS`.
+- Tests: 370 backend tests, with QuantLib cross-checks for:
   - Heston and SABR;
   - all barrier cases, digitals, geometric Asians and lookbacks;
   - Margrabe, Stulz, Kirk, quanto and the bivariate normal;
   - Vasicek and Hull–White bond options, and the Bermudan swaption tree;
+  - forward-start options;
 
   plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
-  all 16 pages.
+  all 21 pages.
 
 ---
 
@@ -211,15 +235,17 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
 │   │   │                              models (Heston/SABR calibration)
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
-│   │   ├── risk/                    ✓ bump.py (bump-and-revalue Greeks for any engine)
+│   │   ├── structured/              ✓ autocallable, reverse_convertible, cliquet (+ forward-start),
+│   │   │                              variance (replication, realised variance), _common
+│   │   ├── risk/                    ✓ bump.py (Greeks for any engine), portfolio.py (book risk, stress)
 │   │   ├── hedging/                 ✓ delta.py (discrete delta hedging, frequency study)
 │   │   └── data/                    ✓ chain, yahoo, synthetic, cleaning, snapshots/*.json
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
 │   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics,
-│   │   │                              multi_asset, rates
+│   │   │                              multi_asset, rates, structured
 │   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics, multi_asset,
-│   │   │                              rates
+│   │   │                              rates, structured
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
@@ -234,6 +260,8 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │       │   ├── charts/              ✓ echart.tsx wrapper, theme.ts (palette + chrome), interpolate.ts
 │       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
 │       │   ├── greek-tiles.tsx      ✓ shared by every area (metadata in lib/greeks.ts)
+│       │   ├── model-section.tsx    ✓ Black–Scholes / Heston panel (exotics, structured)
+│       │   ├── stat-grid.tsx        ✓ hairline stat tiles (rates, structured)
 │       │   └── app-shell, app-header, page-header, panel-section, param-control,
 │       │       number-input, segmented, not-found, page-fallback   ✓ shared building blocks
 │       └── features/
@@ -248,9 +276,11 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │           ├── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
 │           ├── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
 │           ├── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
-│           └── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
+│           ├── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
+│           └── structured/          ✓ five pages + shared charts.tsx (LinesChart, HistogramChart) and
+│                                      market-section.tsx
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options … 05-rates; one note per phase
+└── docs/                            ✓ 01-vanilla-options … 06-structured; one note per phase
 ```
 
 ---
@@ -336,12 +366,23 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
   and the rates package kept separate from the equity `Market` instead of a shared `market/`
   package. Revisit if structured products need rates and equity together.
 
-### Phase 6: Structured products and advanced topics ← **next**
-- Autocallables, reverse convertibles, cliquets / forward-start options
-- Variance and volatility swaps
-- Portfolio-level risk across mixed products; scenario and stress engine
-- Optional: credit (CDS, hazard-rate bootstrapping), xVA basics
+### Phase 6: Structured products and portfolio risk ✓
+- [x] Autocallables (single and worst-of, memory, daily or maturity protection), fair coupon
+- [x] Reverse convertibles (plain and barrier) as bond + coupons − put; touch probability
+- [x] Forward-start options (QuantLib-checked) and cliquets; Black–Scholes vs Heston forward smile
+- [x] Variance swaps by option-strip replication; jump bias; volatility swaps and convexity
+- [x] Portfolio risk across mixed products: bump Greeks, stress grid, scenario engine
+      (full revaluation vs Taylor)
+- [x] UI: five Structured pages; theory note `docs/06-structured.md`
+- Simplified on purpose: one flat volatility per book in the stress engine (no surface
+  shocks), no theta for notes, worst-of notes outside the portfolio page.
 
+### Possible extensions (not scheduled)
+- Credit: CDS pricing and hazard-rate bootstrapping; then xVA basics (CVA on a swap book)
+- Stochastic-local volatility, so cliquets and barriers price consistently with the smile
+- Multi-curve rates (OIS discounting + projection curves), calendars and day counts
+- Sobol quasi-random numbers and the Heston QE scheme for faster, smoother Monte Carlo
+- Surface-level stress scenarios (skew and term-structure shocks) in the risk engine
 ---
 
 ## 6. Technology stack
@@ -353,7 +394,7 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 | API | FastAPI (`fastapi[standard]`) + Pydantic v2; `fastapi dev` / `fastapi run` CLI | Typed validation, OpenAPI docs at `/docs`, `app.frontend()` serves the built SPA |
 | Python env | venv + pip, deps in `backend/pyproject.toml` (hatchling) | uv is not installed on this machine; switching later is optional |
 | Python quality | pytest + hypothesis, ruff (lint + format, line 100), pyright (standard) | |
-| Reference oracle | QuantLib-Python (dev dependency only) | Cross-checks models, exotics, multi-asset and rates closed forms and trees |
+| Reference oracle | QuantLib-Python (dev dependency only) | Cross-checks models, exotics, multi-asset, rates and forward-start closed forms and trees |
 | Market data | yfinance (in the `api` extra) | Free, delayed option chains; bundled snapshots keep tests offline |
 | 3D charts | echarts-gl 2.1 (lazy-loaded on the Surface page) | WebGL surfaces for ECharts 6 |
 | Frontend build | Vite 8, React 19, TypeScript 6 | Fast dev server; `/api` proxied to :8000 |

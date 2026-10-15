@@ -6,6 +6,14 @@ import { AmericanPage, ExoticPricerPage } from '@/features/exotics/pages'
 import { MultiAssetLayout } from '@/features/multi-asset/layout'
 import { CorrelationPage, QuantoPage } from '@/features/multi-asset/pages'
 import { RatesLayout } from '@/features/rates/layout'
+import { StructuredLayout } from '@/features/structured/layout'
+import {
+  AutocallablePage,
+  CliquetPage,
+  ReverseConvertiblePage,
+  RiskPage,
+  VariancePage,
+} from '@/features/structured/pages'
 import { CurvesPage, LinearPage, RateOptionsPage, ShortRatePage } from '@/features/rates/pages'
 import { VanillaLayout } from '@/features/vanilla/layout'
 import { VolatilityLayout } from '@/features/volatility/layout'
@@ -48,6 +56,13 @@ export default function App() {
           <Route path="linear" element={<LinearPage />} />
           <Route path="options" element={<RateOptionsPage />} />
           <Route path="models" element={<ShortRatePage />} />
+        </Route>
+        <Route path="structured" element={<StructuredLayout />}>
+          <Route index element={<AutocallablePage />} />
+          <Route path="reverse-convertible" element={<ReverseConvertiblePage />} />
+          <Route path="cliquet" element={<CliquetPage />} />
+          <Route path="variance" element={<VariancePage />} />
+          <Route path="risk" element={<RiskPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

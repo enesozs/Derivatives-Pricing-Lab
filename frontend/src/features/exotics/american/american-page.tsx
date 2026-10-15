@@ -22,7 +22,12 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { type AmericanMCResponse, api, type OptionKind } from '@/lib/api'
 import { compact, fixed, milliseconds } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { DEFAULT_MODEL, type ModelParams, ModelSection, toModelSpec } from '../model-section'
+import {
+  DEFAULT_MODEL,
+  type ModelParams,
+  ModelSection,
+  toModelSpec,
+} from '@/components/model-section'
 
 interface Params {
   kind: OptionKind

@@ -8,9 +8,11 @@ with a web interface. It covers five areas:
 - **Multi-asset**: spreads, baskets, rainbows and quantos.
 - **Rates**: curve bootstrapping, swaps, bonds, caps and swaptions; Hull–White with Bermudan
   swaptions.
+- **Structured products**: autocallables, reverse convertibles, cliquets, variance swaps, and
+  portfolio stress testing.
 
-Prices are cross-checked against QuantLib. Structured products come next (see `AGENTS.md` §5);
-the theory behind each area is in `docs/`.
+Prices are cross-checked against QuantLib. The theory behind each area is in `docs/`; the
+roadmap and architecture are in `AGENTS.md`.
 
 Educational research tool, not investment advice.
 

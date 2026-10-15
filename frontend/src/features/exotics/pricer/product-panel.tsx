@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import type { OptionKind } from '@/lib/api'
-import { ModelSection } from '../model-section'
+import { ModelSection } from '@/components/model-section'
 import {
   DEFAULT_EXOTIC,
   type ExoticParams,

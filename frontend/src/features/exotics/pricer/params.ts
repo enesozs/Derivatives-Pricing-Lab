@@ -1,5 +1,5 @@
 import type { ExoticRequest, OptionKind, ProductSpec } from '@/lib/api'
-import { DEFAULT_MODEL, type ModelParams, toModelSpec } from '../model-section'
+import { DEFAULT_MODEL, type ModelParams, toModelSpec } from '@/components/model-section'
 
 export type ProductType = ProductSpec['type']
 export type Monitoring = 'continuous' | 'daily' | 'weekly' | 'monthly'

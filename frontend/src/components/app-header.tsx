@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { MoonIcon, SunIcon } from 'lucide-react'
 import { NavLink } from 'react-router'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   segmentedControlItemVariants,
@@ -10,14 +9,14 @@ import {
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
-// Sections follow the roadmap in AGENTS.md; later phases show as "Soon".
+// One section per product area (roadmap phases in AGENTS.md).
 const SECTIONS = [
-  { label: 'Vanilla', to: '/vanilla', phase: null },
-  { label: 'Volatility', to: '/volatility', phase: null },
-  { label: 'Exotics', to: '/exotics', phase: null },
-  { label: 'Multi-asset', to: '/multi-asset', phase: null },
-  { label: 'Rates', to: '/rates', phase: null },
-  { label: 'Structured', to: null, phase: 6 },
+  { label: 'Vanilla', to: '/vanilla' },
+  { label: 'Volatility', to: '/volatility' },
+  { label: 'Exotics', to: '/exotics' },
+  { label: 'Multi-asset', to: '/multi-asset' },
+  { label: 'Rates', to: '/rates' },
+  { label: 'Structured', to: '/structured' },
 ] as const
 
 function ApiStatus() {
@@ -58,25 +57,11 @@ export function AppHeader() {
           <span className="font-semibold text-sm tracking-tight">Derivatives Pricing Lab</span>
         </NavLink>
         <nav aria-label="Sections" className={cn(segmentedControlRootClassName, 'hidden md:flex')}>
-          {SECTIONS.map((s) =>
-            s.to ? (
-              <NavLink key={s.label} to={s.to} className={item}>
-                {s.label}
-              </NavLink>
-            ) : (
-              <span
-                key={s.label}
-                aria-disabled="true"
-                className={cn(item, 'cursor-default opacity-64')}
-                title={`Planned for phase ${s.phase}`}
-              >
-                {s.label}
-                <Badge variant="outline" size="sm">
-                  Soon
-                </Badge>
-              </span>
-            ),
-          )}
+          {SECTIONS.map((s) => (
+            <NavLink key={s.label} to={s.to} className={item}>
+              {s.label}
+            </NavLink>
+          ))}
         </nav>
         <div className="ms-auto flex items-center gap-3">
           <ApiStatus />

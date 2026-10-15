@@ -20,12 +20,11 @@ import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { api, type RateOptionRequest, type RateOptionResponse } from '@/lib/api'
-import { compact, fixed } from '@/lib/format'
+import { compact, fixed, money } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tenorLabel, useCurveQuotes } from './curve-context'
 import { CurveNote } from './curve-note'
-import { money } from './format'
-import { Stat, StatGrid } from './stats'
+import { Stat, StatGrid } from '@/components/stat-grid'
 
 const NOTIONAL = 10_000_000
 

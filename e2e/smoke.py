@@ -4,6 +4,7 @@ Needs the dev servers running (`make dev`) and Google Chrome installed. Run with
 Usage: python e2e/smoke.py [base_url] [screenshot_dir]
 """
 
+import re
 import sys
 from pathlib import Path
 
@@ -176,6 +177,36 @@ def main() -> int:
         page.get_by_role("button", name="+25bp").click()
         page.get_by_role("link", name="Swaps & bonds").click()
         expect(page.get_by_text("Priced on the edited curve")).to_be_visible()
+
+        # Structured products: each page prices; the fair coupon reprices the note at par.
+        page.get_by_role("link", name="Structured", exact=True).click()
+        expect(page.get_by_role("heading", name="Autocallable notes")).to_be_visible()
+        expect(hero).not_to_have_text("—", timeout=20_000)
+        page.get_by_role("button", name="Set the fair coupon").click()
+        page.get_by_role("radio", name="Worst of 3").click()
+        expect(page.get_by_text("Fair coupon against correlation")).to_be_visible(timeout=20_000)
+        shot(page, "structured-autocallable")
+        page.get_by_role("link", name="Reverse convertibles").click()
+        expect(page.get_by_text("What the note is made of")).to_be_visible()
+        page.get_by_role("button", name="Set the fair coupon").click()
+        expect(hero).to_have_text(re.compile(r"^(99\.9\d|100\.0\d)%$"), timeout=15_000)
+        shot(page, "structured-reverse-convertible")
+        page.get_by_role("link", name="Cliquets").click()
+        expect(page.get_by_text("Heston value")).to_be_visible()
+        expect(hero).not_to_have_text("—", timeout=20_000)
+        shot(page, "structured-cliquet")
+        page.get_by_role("link", name="Variance swaps").click()
+        expect(page.get_by_text("Volatility swap strike", exact=True)).to_be_visible()
+        page.get_by_role("radio", name="Jumps").click()
+        expect(page.get_by_text("Jumps: the strip misprices variance")).to_be_visible(
+            timeout=15_000
+        )
+        shot(page, "structured-variance")
+        page.get_by_role("link", name="Portfolio risk").click()
+        expect(page.get_by_role("cell", name="Book", exact=True)).to_be_visible(timeout=20_000)
+        page.get_by_role("button", name="Market maker").click()
+        expect(page.get_by_role("cell", name="Digital put (pays 1)")).to_be_visible(timeout=20_000)
+        shot(page, "structured-risk")
 
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")

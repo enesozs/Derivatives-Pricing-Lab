@@ -22,12 +22,11 @@ import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from '@/compo
 import { Separator } from '@/components/ui/separator'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { api, type Fan, type HWCalibrationResponse, type ShortRateResponse } from '@/lib/api'
-import { fixed } from '@/lib/format'
+import { fixed, money } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { tenorLabel, useCurveQuotes } from './curve-context'
 import { CurveNote } from './curve-note'
-import { money } from './format'
-import { Stat, StatGrid } from './stats'
+import { Stat, StatGrid } from '@/components/stat-grid'
 
 interface Params {
   a: number

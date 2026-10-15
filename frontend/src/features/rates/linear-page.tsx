@@ -20,12 +20,11 @@ import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from '@/compo
 import { Separator } from '@/components/ui/separator'
 import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { api, type BondResponse, type SwapResponse } from '@/lib/api'
-import { compact, fixed } from '@/lib/format'
+import { compact, fixed, money } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { useCurveQuotes } from './curve-context'
 import { CurveNote } from './curve-note'
-import { money } from './format'
-import { Stat, StatGrid } from './stats'
+import { Stat, StatGrid } from '@/components/stat-grid'
 
 const NOTIONAL = 10_000_000
 

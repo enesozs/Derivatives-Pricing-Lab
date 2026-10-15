@@ -679,6 +679,188 @@ export interface HWCalibrationRequest extends CurveRequest {
   black_vols: number[]
 }
 
+// --- Structured products ---------------------------------------------------------------------
+
+export interface Histogram {
+  edges: number[]
+  counts: number[]
+}
+
+export interface Curve {
+  x: number[]
+  y: number[]
+}
+
+export interface StructuredMarket {
+  rate: number
+  dividend_yield: number
+}
+
+export type StructuredModelSpec = ExoticModelSpec
+
+export interface AutocallableRequest extends StructuredMarket {
+  maturity: number
+  frequency: 1 | 2 | 4 | 12
+  coupon: number
+  autocall_level: number
+  coupon_barrier: number
+  protection_barrier: number
+  memory: boolean
+  monitoring: 'maturity' | 'daily'
+  non_call_periods: number
+  assets: number
+  correlation: number
+  model: StructuredModelSpec
+  paths: number
+}
+
+export interface AutocallableResponse {
+  value: number
+  stderr: number
+  fair_coupon: number
+  observation_times: number[]
+  redemption_probabilities: number[]
+  loss_probability: number
+  expected_life: number
+  principal_value: number
+  coupon_annuity: number
+  returns: Histogram
+  coupon_vs_vol: Curve
+  coupon_vs_correlation: Curve | null
+}
+
+export interface ReverseConvertibleRequest extends StructuredMarket {
+  maturity: number
+  coupon: number
+  frequency: 1 | 2 | 4 | 12
+  strike: number
+  barrier: number | null
+  model: StructuredModelSpec
+}
+
+export interface ReverseConvertibleResponse {
+  bond: number
+  coupons: number
+  short_put: number
+  value: number
+  fair_coupon: number
+  barrier_hit_probability: number | null
+  final_levels: number[]
+  redemption_hit: number[]
+  redemption_not_hit: number[]
+  coupon_total: number
+  coupon_vs_vol: Curve
+}
+
+export type VarianceModelSpec =
+  | ExoticModelSpec
+  | {
+      type: 'merton'
+      volatility: number
+      intensity: number
+      jump_mean: number
+      jump_volatility: number
+    }
+
+export interface VarianceRequest extends StructuredMarket {
+  expiry: number
+  n_strikes: number
+  width: number
+  model: VarianceModelSpec
+  paths: number
+}
+
+export interface VarianceResponse {
+  expected_variance: number
+  replicated_variance: number
+  forward: number
+  strikes: number[]
+  weights: number[]
+  option_prices: number[]
+  contributions: number[]
+  implied_vols: (number | null)[]
+  convergence: Curve
+  simulated_variance: number
+  simulated_variance_stderr: number
+  fair_volatility: number
+  fair_volatility_stderr: number
+  convexity_adjustment: number
+  realised_vols: Histogram
+}
+
+export interface CliquetRequest extends StructuredMarket {
+  maturity: number
+  periods: number
+  local_floor: number | null
+  local_cap: number | null
+  global_floor: number | null
+  global_cap: number | null
+  volatility: number
+  kappa: number
+  xi: number
+  rho: number
+  paths: number
+}
+
+export interface ModelValue {
+  value: number
+  stderr: number
+}
+
+export interface CliquetResponse {
+  black_scholes: ModelValue
+  heston: ModelValue
+  closed_form: number | null
+  payoffs_black_scholes: Histogram
+  payoffs_heston: Histogram
+  value_vs_local_cap: Partial<Record<'black_scholes' | 'heston', Curve>>
+  forward_start: Record<'black_scholes' | 'heston', ModelValue>
+  forward_start_closed_form: number
+}
+
+export type RiskProduct =
+  | 'call'
+  | 'put'
+  | 'digital_call'
+  | 'digital_put'
+  | 'down_in_put'
+  | 'up_out_call'
+  | 'reverse_convertible'
+  | 'autocallable'
+
+export interface PositionIn {
+  product: RiskProduct
+  strike: number
+  barrier: number | null
+  expiry: number
+  quantity: number
+  coupon: number
+  label: string
+}
+
+export interface RiskRequest extends StructuredMarket {
+  volatility: number
+  positions: PositionIn[]
+}
+
+export interface PositionRisk {
+  label: string
+  value: number
+  delta: number
+  gamma: number
+  vega: number
+  rho: number
+}
+
+export interface RiskResponse {
+  positions: PositionRisk[]
+  total: PositionRisk
+  spot_shifts: number[]
+  vol_shifts: number[]
+  grid: number[][]
+  scenarios: { name: string; full: number; taylor: number }[]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -757,4 +939,14 @@ export const api = {
     post<ShortRateResponse>('/rates/short-rate', req, signal),
   calibrateHullWhite: (req: HWCalibrationRequest, signal?: AbortSignal) =>
     post<HWCalibrationResponse>('/rates/calibrate-hull-white', req, signal),
+  autocallable: (req: AutocallableRequest, signal?: AbortSignal) =>
+    post<AutocallableResponse>('/structured/autocallable', req, signal),
+  reverseConvertible: (req: ReverseConvertibleRequest, signal?: AbortSignal) =>
+    post<ReverseConvertibleResponse>('/structured/reverse-convertible', req, signal),
+  varianceSwap: (req: VarianceRequest, signal?: AbortSignal) =>
+    post<VarianceResponse>('/structured/variance', req, signal),
+  cliquet: (req: CliquetRequest, signal?: AbortSignal) =>
+    post<CliquetResponse>('/structured/cliquet', req, signal),
+  portfolioRisk: (req: RiskRequest, signal?: AbortSignal) =>
+    post<RiskResponse>('/structured/risk', req, signal),
 }
