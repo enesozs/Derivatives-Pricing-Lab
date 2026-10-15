@@ -5,6 +5,8 @@ import { ExoticsLayout } from '@/features/exotics/layout'
 import { AmericanPage, ExoticPricerPage } from '@/features/exotics/pages'
 import { MultiAssetLayout } from '@/features/multi-asset/layout'
 import { CorrelationPage, QuantoPage } from '@/features/multi-asset/pages'
+import { RatesLayout } from '@/features/rates/layout'
+import { CurvesPage, LinearPage, RateOptionsPage, ShortRatePage } from '@/features/rates/pages'
 import { VanillaLayout } from '@/features/vanilla/layout'
 import { VolatilityLayout } from '@/features/volatility/layout'
 import { CalibrationPage, ModelsPage, SurfacePage } from '@/features/volatility/pages'
@@ -40,6 +42,12 @@ export default function App() {
         <Route path="multi-asset" element={<MultiAssetLayout />}>
           <Route index element={<CorrelationPage />} />
           <Route path="quanto" element={<QuantoPage />} />
+        </Route>
+        <Route path="rates" element={<RatesLayout />}>
+          <Route index element={<CurvesPage />} />
+          <Route path="linear" element={<LinearPage />} />
+          <Route path="options" element={<RateOptionsPage />} />
+          <Route path="models" element={<ShortRatePage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

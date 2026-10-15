@@ -543,6 +543,142 @@ export interface QuantoResponse {
   correlation_values: number[]
 }
 
+// --- Rates ------------------------------------------------------------------------------------
+
+export interface RateQuote {
+  kind: 'deposit' | 'fra' | 'swap'
+  maturity: number
+  rate: number
+  start: number
+  frequency: number
+}
+
+export interface CurveResponse {
+  node_labels: string[]
+  node_times: number[]
+  node_discount: number[]
+  node_zero: number[]
+  repricing_errors: number[]
+  grid: number[]
+  zero: number[]
+  forward: number[]
+  discount: number[]
+  par_tenors: number[]
+  par_rates: number[]
+}
+
+export interface SwapResponse {
+  fixed_rate: number
+  par_rate: number
+  npv: number
+  annuity: number
+  dv01: number
+  cash_flows: { time: number; fixed: number; floating: number; discount: number }[]
+  shifts_bp: number[]
+  shifted_npv: number[]
+}
+
+export interface BondResponse {
+  price: number
+  yield_to_maturity: number
+  macaulay_duration: number
+  modified_duration: number
+  convexity: number
+  dv01: number
+  yields: number[]
+  exact: number[]
+  duration_approx: number[]
+  convexity_approx: number[]
+}
+
+export interface RateOptionResponse {
+  price: number
+  strike: number
+  atm_forward: number
+  equivalent_vol: number | null
+  caplets: { fixing: number; payment: number; forward: number; value: number }[] | null
+  smile_strikes: number[]
+  smile_black: number[]
+  smile_from_normal: (number | null)[]
+}
+
+export interface Fan {
+  times: number[]
+  p05: number[]
+  p25: number[]
+  p50: number[]
+  p75: number[]
+  p95: number[]
+}
+
+export interface ShortRateResponse {
+  hull_white: Fan
+  vasicek: Fan
+  market_zero_times: number[]
+  market_zero: number[]
+  vasicek_zero: number[]
+  hull_white_zero: number[]
+  swaption_strike: number
+  european_jamshidian: number
+  european_tree: number
+  bermudan_tree: number
+}
+
+export interface HWCalibrationResponse {
+  a: number
+  sigma: number
+  rmse: number
+  maturities: number[]
+  market_vols: number[]
+  model_vols: number[]
+}
+
+export interface CurveRequest {
+  quotes: RateQuote[]
+}
+
+export interface SwapRequest extends CurveRequest {
+  maturity: number
+  /** null = the par rate (a swap worth zero today). */
+  fixed_rate: number | null
+  frequency: number
+  notional: number
+  payer: boolean
+}
+
+export interface BondRequest extends CurveRequest {
+  coupon: number
+  maturity: number
+  frequency: number
+}
+
+export interface RateOptionRequest extends CurveRequest {
+  product: 'cap' | 'floor' | 'payer' | 'receiver'
+  /** null = at the money. */
+  strike: number | null
+  maturity: number
+  expiry: number
+  tenor: number
+  frequency: number
+  vol_model: 'black' | 'bachelier'
+  vol: number
+  notional: number
+}
+
+export interface ShortRateRequest extends CurveRequest {
+  a: number
+  sigma: number
+  vasicek_b: number
+  horizon: number
+  swaption_expiry: number
+  swaption_tenor: number
+}
+
+export interface HWCalibrationRequest extends CurveRequest {
+  maturities: number[]
+  black_vols: number[]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -609,4 +745,16 @@ export const api = {
     post<MultiAssetResponse>('/multi-asset/price', req, signal),
   quanto: (req: QuantoRequest, signal?: AbortSignal) =>
     post<QuantoResponse>('/multi-asset/quanto', req, signal),
+  rateCurve: (req: CurveRequest, signal?: AbortSignal) =>
+    post<CurveResponse>('/rates/curve', req, signal),
+  rateSwap: (req: SwapRequest, signal?: AbortSignal) =>
+    post<SwapResponse>('/rates/swap', req, signal),
+  rateBond: (req: BondRequest, signal?: AbortSignal) =>
+    post<BondResponse>('/rates/bond', req, signal),
+  rateOptions: (req: RateOptionRequest, signal?: AbortSignal) =>
+    post<RateOptionResponse>('/rates/options', req, signal),
+  shortRate: (req: ShortRateRequest, signal?: AbortSignal) =>
+    post<ShortRateResponse>('/rates/short-rate', req, signal),
+  calibrateHullWhite: (req: HWCalibrationRequest, signal?: AbortSignal) =>
+    post<HWCalibrationResponse>('/rates/calibrate-hull-white', req, signal),
 }

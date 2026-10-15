@@ -29,7 +29,7 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0–4 are complete.** Next up: Phase 5 (interest-rate derivatives).
+- **Phases 0–5 are complete.** Next up: Phase 6 (structured products).
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -56,6 +56,16 @@ should explain *why*, not just *what*.
   - **Quanto** (`/multi-asset/quanto`): quanto call/put, the drift adjustment, price against
     asset–FX correlation, and a joint asset+FX Monte Carlo check.
   - See `docs/04-multi-asset.md`.
+- **Rates** area, 4 pages, all priced off one shared, editable curve (`CurveProvider` context):
+  - **Curves** (`/rates`): quote editor (deposits, swaps; parallel bumps), zero and forward
+    curves, discount factors, bootstrapped nodes with repricing errors.
+  - **Swaps & bonds** (`/rates/linear`): swap NPV, par rate, annuity, DV01, cash flows, NPV vs
+    parallel shift; bond price, yield, durations, convexity, price–yield approximations.
+  - **Caps & swaptions** (`/rates/options`): Black-76 or Bachelier; caplet strip, equivalent vol
+    in the other model, the smile each model implies.
+  - **Short-rate models** (`/rates/models`): Hull–White vs Vasicek fans and curve fit; European
+    swaption (Jamshidian vs trinomial tree) and Bermudan; Hull–White calibration to cap vols.
+  - See `docs/05-rates.md`.
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -83,13 +93,19 @@ should explain *why*, not just *what*.
   `RainbowOption`, `QuantoOption`. Engines: `MultiAssetAnalyticEngine` (Margrabe, Kirk, Levy,
   Stulz) and `MultiAssetMonteCarloEngine` (Cholesky paths; geometric-basket control variate),
   plus `quanto_price` / `quanto_monte_carlo`. Bivariate normal CDF: `core.bivariate` (Genz).
-- Tests: 303 backend tests, with QuantLib cross-checks for:
+- Rates (`derivlab.rates`, its own type family; single curve, ACT/365F, no calendars):
+  `DiscountCurve` (log-linear DF), `Quote` + `bootstrap`, `FixedRateBond`, `InterestRateSwap`,
+  `black` / `bachelier` / `implied_vol`, `CapFloor`, `Swaption`, `Vasicek`, `HullWhite`
+  (Jamshidian bond options, caps, swaptions; simulation), `calibrate_hull_white_to_caps`,
+  trinomial `build_tree` and `bermudan_swaption`.
+- Tests: 337 backend tests, with QuantLib cross-checks for:
   - Heston and SABR;
   - all barrier cases, digitals, geometric Asians and lookbacks;
   - Margrabe, Stulz, Kirk, quanto and the bivariate normal;
+  - Vasicek and Hull–White bond options, and the Bermudan swaption tree;
 
   plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
-  all 12 pages.
+  all 16 pages.
 
 ---
 
@@ -176,7 +192,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   ├── pyproject.toml               ✓ deps + ruff, pyright, pytest config
 │   ├── src/derivlab/                ✓ pricing library
 │   │   ├── core/                    ✓ errors (UnsupportedError), stats (normal), bivariate (Genz)
-│   │   ├── market.py                ✓ Market (flat rate). Becomes market/ with curves in Phase 5
+│   │   ├── market.py                ✓ Market (flat rate) for equity products
 │   │   ├── models/                  ✓ black_scholes, heston, merton, sabr, local_vol (+ char. functions)
 │   │   ├── results.py               ✓ Greeks, PricingResult
 │   │   ├── instruments/             ✓ payoffs, exercise, vanilla, exotic (digital/barrier/Asian/lookback)
@@ -189,6 +205,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   │   └── fourier/             ✓ COS method (vectorised over strikes), risk-neutral density
 │   │   ├── research/                ✓ convergence.py, profile.py
 │   │   ├── multi_asset/             ✓ market/model, instruments, analytic, montecarlo
+│   │   ├── rates/                   ✓ curve, schedule, bootstrap, products (bond/swap), options
+│   │   │                              (Black-76/Bachelier caps, swaptions), short_rate (Vasicek,
+│   │   │                              Hull–White, calibration), tree (trinomial, Bermudan)
 │   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
 │   │   │                              models (Heston/SABR calibration)
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
@@ -198,8 +217,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
 │   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics,
-│   │   │                              multi_asset
-│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics, multi_asset
+│   │   │                              multi_asset, rates
+│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics, multi_asset,
+│   │   │                              rates
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
@@ -227,9 +247,10 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │               └── hedging/         ✓
 │           ├── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
 │           ├── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
-│           └── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
+│           ├── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
+│           └── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options … 04-multi-asset; one note per phase
+└── docs/                            ✓ 01-vanilla-options … 05-rates; one note per phase
 ```
 
 ---
@@ -301,14 +322,21 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - [x] Correlation sensitivity (dV/dρ) and price-vs-correlation curves; joint-scenario scatter
 - [x] UI: Correlation lab and Quanto pages; theory note `docs/04-multi-asset.md`
 
-### Phase 5: Interest-rate derivatives ← **next**
-- Day counts and schedules; curve bootstrapping from deposits/FRAs/swaps (`market/` package)
-- Bonds, FRAs, interest-rate swaps
-- Black-76 (options on futures/forwards) and Bachelier (normal model) analytic engines
-- Caps/floors and swaptions (Black-76 and Bachelier)
-- Short-rate models: Vasicek, Hull–White (analytic bonds + trinomial tree); calibration
+### Phase 5: Interest-rate derivatives ✓
+- [x] Discount curve (log-linear DF), schedules, bootstrapping from deposits/FRAs/par swaps
+- [x] Fixed-rate bonds (yield, durations, convexity, DV01) and interest-rate swaps (par rate,
+      annuity, DV01, cash flows)
+- [x] Black-76 and Bachelier, implied vols in both; caps/floors and European swaptions
+- [x] Vasicek and Hull–White: closed-form bonds and bond options (Jamshidian), caps, swaptions,
+      simulation; Hull–White calibration to cap vols
+- [x] Hull–White trinomial tree; Bermudan swaptions (QuantLib-checked)
+- [x] UI: Curves, Swaps & bonds, Caps & swaptions, Short-rate models on one shared editable
+      curve; theory note `docs/05-rates.md`
+- Simplified on purpose: a single curve (no OIS/projection split), ACT/365F with no calendars,
+  and the rates package kept separate from the equity `Market` instead of a shared `market/`
+  package. Revisit if structured products need rates and equity together.
 
-### Phase 6: Structured products and advanced topics
+### Phase 6: Structured products and advanced topics ← **next**
 - Autocallables, reverse convertibles, cliquets / forward-start options
 - Variance and volatility swaps
 - Portfolio-level risk across mixed products; scenario and stress engine
@@ -325,7 +353,7 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 | API | FastAPI (`fastapi[standard]`) + Pydantic v2; `fastapi dev` / `fastapi run` CLI | Typed validation, OpenAPI docs at `/docs`, `app.frontend()` serves the built SPA |
 | Python env | venv + pip, deps in `backend/pyproject.toml` (hatchling) | uv is not installed on this machine; switching later is optional |
 | Python quality | pytest + hypothesis, ruff (lint + format, line 100), pyright (standard) | |
-| Reference oracle | QuantLib-Python (dev dependency only) | Cross-checks Heston and SABR today; exotics and rates next |
+| Reference oracle | QuantLib-Python (dev dependency only) | Cross-checks models, exotics, multi-asset and rates closed forms and trees |
 | Market data | yfinance (in the `api` extra) | Free, delayed option chains; bundled snapshots keep tests offline |
 | 3D charts | echarts-gl 2.1 (lazy-loaded on the Surface page) | WebGL surfaces for ECharts 6 |
 | Frontend build | Vite 8, React 19, TypeScript 6 | Fast dev server; `/api` proxied to :8000 |
@@ -362,7 +390,7 @@ for React + FastAPI; pip + venv instead of uv for now; git initialised.
 
 **Units and quoting**
 - Library: rates, volatilities and dividend yields are annualised decimals (`0.05` = 5%),
-  continuously compounded. Time is in years (ACT/365 until Phase 5). Prices are per unit of underlying.
+  continuously compounded. Time is in years (ACT/365F everywhere, including rates; no calendars). Prices are per unit of underlying.
 - Library Greeks: vega and rho per **1.0** change, theta per **year**.
 - UI: shows percent inputs and market-convention Greeks (vega per vol point, theta per day, rho per
   1%) and always labels the unit. Conversions live in `features/*/params.ts`, nowhere else.

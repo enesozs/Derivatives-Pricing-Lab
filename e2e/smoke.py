@@ -149,6 +149,34 @@ def main() -> int:
         expect(hero).to_have_text("9.3583")  # matches QuantLib's quanto engine
         shot(page, "quanto")
 
+        # Rates: the bootstrap reprices its quotes; every page prices off the shared curve.
+        page.get_by_role("link", name="Rates", exact=True).click()
+        expect(page.get_by_role("heading", name="Yield curves")).to_be_visible()
+        expect(page.get_by_role("cell", name="Swap 10Y")).to_be_visible(timeout=15_000)
+        shot(page, "rates-curves")
+        page.get_by_role("link", name="Swaps & bonds").click()
+        expect(hero).to_have_text("0", timeout=15_000)  # a swap at the par rate is worth zero
+        page.get_by_role("radio", name="Off-market").click()
+        expect(hero).not_to_have_text("0", timeout=15_000)
+        expect(page.get_by_text("Modified duration")).to_be_visible()
+        shot(page, "rates-linear")
+        page.get_by_role("link", name="Caps & swaptions").click()
+        for product in ("Cap", "Floor", "Payer", "Receiver"):
+            page.get_by_role("radio", name=product, exact=True).click()
+            expect(hero).not_to_have_text("—", timeout=15_000)
+        page.get_by_role("radio", name="Bachelier (normal)").click()
+        expect(page.get_by_text("Equivalent Black vol")).to_be_visible(timeout=15_000)
+        shot(page, "rates-options")
+        page.get_by_role("link", name="Short-rate models").click()
+        expect(page.get_by_text("Bermudan, tree")).to_be_visible(timeout=15_000)
+        page.get_by_role("button", name="Use fitted a, σ").click()
+        shot(page, "rates-models")
+        # Editing the curve reaches the other pages.
+        page.get_by_role("link", name="Curves").click()
+        page.get_by_role("button", name="+25bp").click()
+        page.get_by_role("link", name="Swaps & bonds").click()
+        expect(page.get_by_text("Priced on the edited curve")).to_be_visible()
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()

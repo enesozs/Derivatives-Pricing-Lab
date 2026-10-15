@@ -16,7 +16,8 @@ const SECTIONS = [
   { label: 'Volatility', to: '/volatility', phase: null },
   { label: 'Exotics', to: '/exotics', phase: null },
   { label: 'Multi-asset', to: '/multi-asset', phase: null },
-  { label: 'Rates', to: null, phase: 5 },
+  { label: 'Rates', to: '/rates', phase: null },
+  { label: 'Structured', to: null, phase: 6 },
 ] as const
 
 function ApiStatus() {

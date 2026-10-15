@@ -1,10 +1,16 @@
 # Derivatives Pricing Lab
 
 An interactive lab for pricing and analysing derivatives. It pairs a tested Python pricing library
-with a web interface. Today it covers vanilla European and American options, priced three ways
-(Black–Scholes closed form, a binomial tree, and Monte Carlo). It shows the Greeks, value and Greek
-curves across spot, and how fast each numerical method converges.
-Volatility surfaces, exotic options and rates products come next (see `AGENTS.md` §5).
+with a web interface. It covers five areas:
+- **Vanilla options**: five pricing methods, Greeks, strategies and delta hedging.
+- **Volatility**: surfaces from market data, SVI and local vol; Heston and SABR calibration.
+- **Exotics**: barriers, Asians, lookbacks, digitals, and American options by simulation.
+- **Multi-asset**: spreads, baskets, rainbows and quantos.
+- **Rates**: curve bootstrapping, swaps, bonds, caps and swaptions; Hull–White with Bermudan
+  swaptions.
+
+Prices are cross-checked against QuantLib. Structured products come next (see `AGENTS.md` §5);
+the theory behind each area is in `docs/`.
 
 Educational research tool, not investment advice.
 
