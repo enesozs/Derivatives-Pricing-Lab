@@ -360,6 +360,128 @@ export interface ModelSmileResponse {
   reference_density: number[]
 }
 
+// --- Exotics ---------------------------------------------------------------------------------
+
+export type ProductSpec =
+  | {
+      type: 'digital'
+      kind: OptionKind
+      strike: number
+      expiry: number
+      payout: 'cash' | 'asset'
+      cash: number
+    }
+  | {
+      type: 'barrier'
+      kind: OptionKind
+      strike: number
+      expiry: number
+      barrier: number
+      direction: 'up' | 'down'
+      knock: 'in' | 'out'
+      /** null = continuous monitoring. */
+      observations: number | null
+    }
+  | {
+      type: 'asian'
+      kind: OptionKind
+      strike: number
+      expiry: number
+      fixings: number
+      averaging: 'arithmetic' | 'geometric'
+      strike_type: 'fixed' | 'floating'
+    }
+  | {
+      type: 'lookback'
+      kind: OptionKind
+      expiry: number
+      strike_type: 'fixed' | 'floating'
+      strike: number
+      observations: number | null
+    }
+
+export type ExoticModelSpec =
+  | { type: 'black_scholes'; volatility: number }
+  | { type: 'heston'; v0: number; kappa: number; theta: number; xi: number; rho: number }
+
+export interface ExoticRequest {
+  product: ProductSpec
+  spot: number
+  rate: number
+  dividend_yield: number
+  model: ExoticModelSpec
+  mc_paths: number
+  seed: number
+}
+
+export interface ExoticMethod {
+  method: 'analytic' | 'monte_carlo' | 'pde'
+  label: string
+  status: 'ok' | 'unsupported' | 'error'
+  value: number | null
+  stderr: number | null
+  ci_low: number | null
+  ci_high: number | null
+  runtime_ms: number | null
+  note: string | null
+}
+
+export interface ExoticPriceResponse {
+  value: number
+  value_label: string
+  vanilla_value: number | null
+  greeks: Greeks | null
+  greeks_label: string | null
+  methods: ExoticMethod[]
+}
+
+export interface ExoticProfileResponse {
+  engine_label: string
+  spots: number[]
+  value: number[]
+  delta: number[]
+  vanilla_value: number[] | null
+  vanilla_delta: number[] | null
+}
+
+export interface ExoticPathsResponse {
+  times: number[]
+  paths: number[][]
+  payoffs: number[]
+  hit: boolean[] | null
+  fixing_times: number[] | null
+  averages: number[] | null
+  extremes: number[][] | null
+}
+
+export interface AmericanMCRequest {
+  kind: OptionKind
+  strike: number
+  expiry: number
+  spot: number
+  rate: number
+  dividend_yield: number
+  model: ExoticModelSpec
+  paths: number
+  exercise_dates: number
+  degree: number
+}
+
+export interface AmericanMCResponse {
+  lsm_value: number
+  lsm_stderr: number
+  reference_value: number | null
+  reference_label: string | null
+  european_value: number
+  exercise_times: number[]
+  lsm_boundary: (number | null)[]
+  reference_times: number[]
+  reference_boundary: (number | null)[]
+  exercise_points: number[][]
+  convergence: { paths: number; value: number; stderr: number }[]
+  runtime_ms: number
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -414,4 +536,12 @@ export const api = {
     post<CalibrationResponse>('/volatility/calibrate', req, signal),
   modelSmile: (req: ModelSmileRequest, signal?: AbortSignal) =>
     post<ModelSmileResponse>('/volatility/model-smile', req, signal),
+  exoticPrice: (req: ExoticRequest, signal?: AbortSignal) =>
+    post<ExoticPriceResponse>('/exotics/price', req, signal),
+  exoticProfile: (req: ExoticRequest, signal?: AbortSignal) =>
+    post<ExoticProfileResponse>('/exotics/profile', req, signal),
+  exoticPaths: (req: ExoticRequest, signal?: AbortSignal) =>
+    post<ExoticPathsResponse>('/exotics/paths', req, signal),
+  americanMC: (req: AmericanMCRequest, signal?: AbortSignal) =>
+    post<AmericanMCResponse>('/exotics/american', req, signal),
 }

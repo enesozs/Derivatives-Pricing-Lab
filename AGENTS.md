@@ -29,7 +29,7 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0, 1 and 2 are complete.** Next up: Phase 3 (path-dependent exotics).
+- **Phases 0–3 are complete.** Next up: Phase 4 (multi-asset and correlation).
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -41,8 +41,18 @@ should explain *why*, not just *what*.
   - **Calibration** (`/volatility/calibration`): Heston (whole surface) or SABR (per expiry);
     parameters, RMSE, Feller check, market-vs-model small multiples.
   - See `docs/02-volatility.md`.
+- **Exotics** area, 2 pages:
+  - **Exotic pricer** (`/exotics`): digital, barrier (continuous or discrete monitoring), Asian
+    (arithmetic/geometric, fixed/floating), lookback; Black–Scholes or Heston. It shows value
+    vs the equivalent vanilla, Greeks, a value/delta profile across spot, simulated paths
+    illustrating the payoff, and which methods can price it.
+  - **American by simulation** (`/exotics/american`): Longstaff–Schwartz vs tree, with the
+    exercise boundary vs the PDE and convergence in paths. Works under Heston too.
+  - See `docs/03-exotics.md`.
+- Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
+  `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
-- Engines × models:
+- Engines × models (vanilla):
 
   | Engine | BS | Heston | Merton | SABR | LocalVol | American |
   |---|---|---|---|---|---|---|
@@ -52,12 +62,21 @@ should explain *why*, not just *what*.
   | `FiniteDifferenceEngine` | ✓ Greeks | – | – | – | ✓ | ✓ |
   | `MonteCarloEngine` | ✓ Greeks | ✓ Euler | ✓ exact | – | ✓ Euler | – |
 
+  Exotics: `AnalyticEngine` (Black–Scholes closed forms: digitals, barriers incl. the BGK
+  discrete correction, geometric Asians, continuous lookbacks), `FiniteDifferenceEngine`
+  (continuous barriers, Black–Scholes/local vol), `MonteCarloEngine` (everything, any model;
+  Brownian-bridge barriers/lookbacks, geometric control variate for Asians).
+  `LongstaffSchwartzEngine` prices American/Bermudan vanillas under any model.
   Unsupported combinations raise `UnsupportedError`.
 - Data: `derivlab.data`, which covers raw chains, the Yahoo fetcher, the bundled
   `snapshots/spy-2026-10-14.json`, synthetic Heston chains, and cleaning (parity forwards, OTM
   selection, wing trimming).
-- Tests: 179 backend tests (incl. QuantLib cross-checks for Heston and SABR, and an end-to-end
-  synthetic → SVI → Dupire → PDE consistency test) and a Playwright smoke test over all 8 pages.
+- Tests: 274 backend tests, with QuantLib cross-checks for:
+  - Heston and SABR;
+  - all barrier cases, digitals, geometric Asians and lookbacks;
+
+  plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
+  all 10 pages.
 
 ---
 
@@ -147,13 +166,13 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   ├── market.py                ✓ Market (flat rate). Becomes market/ with curves in Phase 5
 │   │   ├── models/                  ✓ black_scholes, heston, merton, sabr, local_vol (+ char. functions)
 │   │   ├── results.py               ✓ Greeks, PricingResult
-│   │   ├── instruments/             ✓ payoffs.py, exercise.py, vanilla.py; later exotic/, rates/
+│   │   ├── instruments/             ✓ payoffs, exercise, vanilla, exotic (digital/barrier/Asian/lookback)
 │   │   ├── engines/
 │   │   │   ├── base.py              ✓ PricingEngine protocol
-│   │   │   ├── analytic/            ✓ Black–Scholes; later Black-76, barriers, Asians, Margrabe…
+│   │   │   ├── analytic/            ✓ black_scholes (BS, Merton, SABR), exotics (closed forms)
 │   │   │   ├── lattice/             ✓ binomial.py (CRR, Jarrow–Rudd, Leisen–Reimer; tree_nodes)
-│   │   │   ├── montecarlo/          ✓ paths.py, engine.py (pathwise/LR Greeks); later QMC, LSM
-│   │   │   ├── pde/                 ✓ Crank–Nicolson + Rannacher, American via penalty
+│   │   │   ├── montecarlo/          ✓ paths, engine (pathwise/LR Greeks), exotics (bridge), lsm
+│   │   │   ├── pde/                 ✓ Crank–Nicolson + Rannacher, American (penalty), barriers
 │   │   │   └── fourier/             ✓ COS method (vectorised over strikes), risk-neutral density
 │   │   ├── research/                ✓ convergence.py, profile.py
 │   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
@@ -164,8 +183,8 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   └── data/                    ✓ chain, yahoo, synthetic, cleaning, snapshots/*.json
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
-│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility
-│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility: one router per area
+│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics
+│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
@@ -179,21 +198,22 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │       │   ├── ui/                  ✓ coss components (vendored; edit sparingly)
 │       │   ├── charts/              ✓ echart.tsx wrapper, theme.ts (palette + chrome), interpolate.ts
 │       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
+│       │   ├── greek-tiles.tsx      ✓ shared by every area (metadata in lib/greeks.ts)
 │       │   └── app-shell, app-header, page-header, panel-section, param-control,
 │       │       number-input, segmented, not-found, page-fallback   ✓ shared building blocks
 │       └── features/
 │           └── vanilla/             ✓ product area
 │               ├── layout.tsx       ✓ sub-navigation + Suspense for lazy pages
 │               ├── pages.ts         ✓ lazy page imports (also used to preload on hover)
-│               ├── greeks.ts  greek-tiles.tsx   ✓ Greek display metadata + tiles, shared
 │               ├── pricer/          ✓ one folder per page: params.ts, data hook, panels, charts
 │               ├── implied-vol/     ✓
 │               ├── methods/         ✓ Trees & grids page
 │               ├── strategies/      ✓ presets in params.ts; scenario heatmap
 │               └── hedging/         ✓
-│           └── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
+│           ├── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
+│           └── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options.md, 02-volatility.md; one note per phase
+└── docs/                            ✓ 01-vanilla-options, 02-volatility, 03-exotics; one note per phase
 ```
 
 ---
@@ -244,20 +264,20 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - Deferred: SSVI (global arbitrage-free parametrisation) and stochastic-local volatility,
   revisited if Phase 3 exotics need them.
 
-### Phase 3: First exotics, path-dependent options ← **next**
-"Exotic" means anything beyond a plain call or put: the payoff depends on the price path, on several
-assets, has an unusual shape, or embeds features like early redemption.
-- Path infrastructure: time grids, Brownian bridge, Sobol quasi-random numbers, Heston paths (QE)
-- Digital options (cash-or-nothing, asset-or-nothing)
-- Barrier options (knock-in/out, up/down): analytic (Reiner–Rubinstein), MC with Brownian-bridge
-  crossing correction, PDE with barrier boundaries; in–out parity tests
-- Asian options: geometric (closed form) and arithmetic (MC with geometric control variate)
-- Lookback options (fixed and floating strike)
-- American/Bermudan by Monte Carlo: Longstaff–Schwartz
-- Hedging experiments for exotics (why barriers are hard to hedge near the barrier)
-- Numba only if profiling shows MC/LSM or PDE loops are the bottleneck
+### Phase 3: First exotics, path-dependent options ✓
+- [x] Instruments: digital (cash/asset), barrier (8 types, continuous/discrete monitoring),
+      Asian (arithmetic/geometric, fixed/floating), lookback (fixed/floating, continuous/discrete)
+- [x] Closed forms (Haug) cross-checked with QuantLib; BGK correction for discrete barriers
+- [x] Monte Carlo for exotics under any model: batched paths, Brownian-bridge barriers and
+      lookback extremes, geometric-Asian control variate
+- [x] PDE knock-out grids ending on the barrier; knock-ins by in–out parity
+- [x] Longstaff–Schwartz (American/Bermudan by regression), any model; exercise boundary
+- [x] UI: Exotic pricer (BS vs Heston model risk, value/delta profiles, payoff paths) and
+      American by simulation; theory note `docs/03-exotics.md`
+- Deferred: Sobol quasi-random numbers and the Heston QE scheme (Euler + Brownian bridge is
+  enough at current accuracy); Numba (no hot spot found: the slowest exotic price is ~0.5 s).
 
-### Phase 4: Multi-asset and correlation
+### Phase 4: Multi-asset and correlation ← **next**
 - Correlated paths (Cholesky); correlation as a model parameter
 - Exchange/spread (Margrabe, Kirk), basket (moment matching + MC), rainbow (best-of/worst-of), quanto
 - Correlation sensitivities and stress

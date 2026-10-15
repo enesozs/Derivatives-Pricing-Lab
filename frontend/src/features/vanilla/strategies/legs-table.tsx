@@ -10,7 +10,7 @@ import {
 import type { Greeks, StrategyResponse } from '@/lib/api'
 import { fixed, signed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { GREEKS } from '../greeks'
+import { GREEKS } from '@/lib/greeks'
 import { describeLeg, type StrategyParams } from './params'
 
 interface LegsTableProps {

@@ -19,7 +19,14 @@ from scipy.special import ndtr
 
 from derivlab.core.errors import UnsupportedError
 from derivlab.core.stats import norm_cdf, norm_pdf
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import (
+    AsianOption,
+    BarrierOption,
+    DigitalOption,
+    Instrument,
+    LookbackOption,
+    VanillaOption,
+)
 from derivlab.market import Market
 from derivlab.models import SABR, BlackScholes, Merton, Model
 from derivlab.results import Greeks, PricingResult
@@ -97,7 +104,9 @@ def merton_price(option: VanillaOption, market: Market, model: Merton) -> tuple[
 
 @dataclass(frozen=True)
 class AnalyticEngine:
-    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+    def price(self, option: Instrument, market: Market, model: Model) -> PricingResult:
+        if not isinstance(option, VanillaOption):
+            return _exotic(option, market, model)
         if option.is_american:
             raise UnsupportedError("No closed form for American exercise; use a lattice engine")
         t, strike, sign = option.expiry, option.payoff.strike, option.payoff.sign
@@ -151,3 +160,33 @@ def black_scholes_arrays(
     value = sign * (spot * carry * ndtr(sign * d1) - strike * discount * ndtr(sign * d2))
     delta = sign * carry * ndtr(sign * d1)
     return value, delta
+
+
+def _exotic(option: Instrument, market: Market, model: Model) -> PricingResult:
+    """Closed-form exotics: Black–Scholes only (see exotics.py for the formulas)."""
+    from . import exotics  # local import: exotics imports this module
+
+    if not isinstance(model, BlackScholes):
+        raise UnsupportedError(
+            f"Exotic closed forms assume Black–Scholes, not {type(model).__name__}; use Monte Carlo"
+        )
+    sigma = model.volatility
+    if sigma <= 0:
+        raise ValueError("exotic closed forms need positive volatility")
+    if isinstance(option, DigitalOption):
+        return PricingResult(exotics.digital_price(option, market, sigma))
+    if isinstance(option, BarrierOption):
+        value = exotics.barrier_price(option, market, sigma)
+        note = "continuous" if option.observations is None else "Broadie–Glasserman–Kou correction"
+        return PricingResult(value, diagnostics={"monitoring": note})
+    if isinstance(option, AsianOption):
+        if option.averaging != "geometric" or option.strike_type != "fixed":
+            raise UnsupportedError(
+                "No closed form for arithmetic or floating-strike Asians; use Monte Carlo"
+            )
+        return PricingResult(exotics.geometric_asian_price(option, market, sigma))
+    if isinstance(option, LookbackOption):
+        if option.observations is not None:
+            raise UnsupportedError("Closed-form lookbacks assume continuous monitoring")
+        return PricingResult(exotics.lookback_price(option, market, sigma))
+    raise UnsupportedError(f"No closed form for {type(option).__name__}")

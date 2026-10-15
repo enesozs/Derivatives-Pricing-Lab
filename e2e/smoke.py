@@ -115,6 +115,26 @@ def main() -> int:
         assert rmse < 0.3, f"Heston fit to its own synthetic data should be tight, got {rmse}"
         shot(page, "volatility-calibration")
 
+        # Exotics: the default down-and-out call matches its closed form; every product prices.
+        page.get_by_role("link", name="Exotics", exact=True).click()
+        expect(page.get_by_role("heading", name="Exotic options")).to_be_visible()
+        expect(hero).to_have_text("9.9234")
+        for product in ("Digital", "Asian", "Lookback", "Barrier"):
+            page.get_by_role("radio", name=product, exact=True).click()
+            expect(page.get_by_role("heading", name="Which methods can price it")).to_be_visible()
+            expect(page.get_by_text("Priced").first).to_be_visible(timeout=15_000)
+        page.get_by_role("radio", name="Heston").first.click()
+        expect(page.get_by_text("Monte Carlo · 50,000 paths").first).to_be_visible(timeout=15_000)
+        shot(page, "exotics")
+
+        # American by simulation: Longstaff–Schwartz lands near the tree.
+        page.get_by_role("link", name="American by simulation").click()
+        expect(page.get_by_text("Early-exercise premium")).to_be_visible(timeout=20_000)
+        expect(hero).not_to_have_text("—", timeout=20_000)
+        lsm = float(hero.inner_text())
+        assert abs(lsm - 6.09) < 0.08, f"LSM American put {lsm} far from tree value 6.09"
+        shot(page, "exotics-american")
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()

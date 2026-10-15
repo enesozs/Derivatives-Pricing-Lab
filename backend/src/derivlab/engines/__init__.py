@@ -2,7 +2,7 @@ from .analytic import AnalyticEngine
 from .base import PricingEngine
 from .fourier import CosEngine
 from .lattice import BinomialEngine
-from .montecarlo import MonteCarloEngine
+from .montecarlo import LongstaffSchwartzEngine, MonteCarloEngine
 from .pde import FiniteDifferenceEngine
 
 __all__ = [
@@ -10,6 +10,7 @@ __all__ = [
     "BinomialEngine",
     "CosEngine",
     "FiniteDifferenceEngine",
+    "LongstaffSchwartzEngine",
     "MonteCarloEngine",
     "PricingEngine",
 ]

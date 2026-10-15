@@ -10,10 +10,21 @@ from .engines import (
     BinomialEngine,
     CosEngine,
     FiniteDifferenceEngine,
+    LongstaffSchwartzEngine,
     MonteCarloEngine,
     PricingEngine,
 )
-from .instruments import American, European, PlainVanilla, VanillaOption
+from .instruments import (
+    American,
+    AsianOption,
+    BarrierOption,
+    DigitalOption,
+    European,
+    Instrument,
+    LookbackOption,
+    PlainVanilla,
+    VanillaOption,
+)
 from .market import Market
 from .models import SABR, BlackScholes, Heston, LocalVol, Merton, Model
 from .results import Greeks, PricingResult
@@ -22,14 +33,20 @@ __all__ = [
     "SABR",
     "American",
     "AnalyticEngine",
+    "AsianOption",
+    "BarrierOption",
     "BinomialEngine",
     "BlackScholes",
     "CosEngine",
+    "DigitalOption",
     "European",
     "FiniteDifferenceEngine",
     "Greeks",
     "Heston",
+    "Instrument",
     "LocalVol",
+    "LongstaffSchwartzEngine",
+    "LookbackOption",
     "Market",
     "Merton",
     "Model",

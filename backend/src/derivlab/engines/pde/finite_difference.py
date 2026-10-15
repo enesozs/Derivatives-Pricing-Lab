@@ -19,6 +19,10 @@ Local volatility: with sigma = sigma(S, t) the coefficients vary by node and ste
 re-evaluated every step at the step's midpoint in calendar time. This is how Dupire local-vol
 models are priced in practice, and it reproduces the surface they were built from.
 
+Barrier options (continuous monitoring, knock-out): the grid ends exactly on the barrier,
+where the option is worth zero (Dirichlet). Spot sits exactly on a node. Knock-ins follow from
+in–out parity, in = vanilla - out.
+
 Boundaries: Dirichlet values from the asymptotic option value far in/out of the money.
 Error: O(dx^2 + dtau^2) for European options.
 References: Duffy, Finite Difference Methods in Financial Engineering, ch. 13-16;
@@ -27,13 +31,14 @@ Rannacher (1984); Forsyth & Vetzal (2002), SIAM J. Sci. Comput. 23(6).
 
 import math
 from dataclasses import dataclass, replace
+from typing import Literal
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import solve_banded
 
 from derivlab.core.errors import UnsupportedError
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import BarrierOption, European, Instrument, VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes, LocalVol, Model
 from derivlab.results import Greeks, PricingResult
@@ -62,6 +67,7 @@ def _boundaries(
 ) -> tuple[float, float]:
     """Option value at the grid edges: deep out of the money -> 0, deep in -> discounted forward."""
     df_r, df_q = market.discount(tau), math.exp(-market.dividend_yield * tau)
+    # (A knock-out barrier on either edge overrides these with zero; see solve_pde.)
     if option.payoff.kind == "call":
         low, high = 0.0, s_high * df_q - option.payoff.strike * df_r
     else:
@@ -102,6 +108,7 @@ def solve_pde(
     width: float = 5.0,
     keep_grid: bool = False,
     half_width: float | None = None,
+    barrier: tuple[float, Literal["up", "down"]] | None = None,
 ) -> tuple[
     NDArray[np.float64], NDArray[np.float64], NDArray[np.float64], float, PDESolution | None
 ]:
@@ -109,6 +116,8 @@ def solve_pde(
 
     Returns (spots, values at T, values one step earlier, dtau of that last step, optional grid).
     The explicit half of each step uses the previous boundary values (they are part of `values`).
+    With `barrier = (H, direction)` the grid ends on H, where the value is held at zero
+    (knock-out); spot is still placed exactly on a node.
     """
     if space_steps < 20 or time_steps < 10:
         raise ValueError("grid too small: need at least 20 space and 10 time steps")
@@ -116,11 +125,29 @@ def solve_pde(
     space_steps += space_steps % 2  # even, so today's spot is the middle node
     if half_width is None:
         half_width = grid_half_width(option, market, model, width)
-    x = math.log(market.spot) + np.linspace(-half_width, half_width, space_steps + 1)
+    log_spot = math.log(market.spot)
+    if barrier is None:
+        x = log_spot + np.linspace(-half_width, half_width, space_steps + 1)
+    else:
+        level, direction = barrier
+        distance = abs(log_spot - math.log(level))
+        if distance <= 0 or (direction == "down") != (level < market.spot):
+            raise ValueError("spot must be strictly on the live side of the barrier")
+        target_dx = 2 * half_width / space_steps
+        to_barrier = max(2, round(distance / target_dx))
+        dx_b = distance / to_barrier
+        away = max(2, round(half_width / dx_b))
+        if direction == "down":
+            x = math.log(level) + dx_b * np.arange(to_barrier + away + 1)
+        else:
+            x = log_spot - dx_b * away + dx_b * np.arange(away + to_barrier + 1)
+        space_steps = len(x) - 1
     spots = np.exp(x)
     dx = x[1] - x[0]
 
     payoff = option.payoff(spots)
+    if barrier is not None:
+        payoff[0 if barrier[1] == "down" else -1] = 0.0
     values = payoff.copy()
 
     carry = market.rate - market.dividend_yield
@@ -154,6 +181,11 @@ def solve_pde(
         previous = values
         tau_new = tau + step
         low_new, high_new = _boundaries(option, market, spots[0], spots[-1], tau_new)
+        if barrier is not None:
+            if barrier[1] == "down":
+                low_new = 0.0
+            else:
+                high_new = 0.0
         if isinstance(model, LocalVol):
             sub, main, sup = operator(t - (tau + 0.5 * step))
 
@@ -216,64 +248,127 @@ class FiniteDifferenceEngine:
     def label(self) -> str:
         return f"Crank–Nicolson PDE · {self.space_steps}×{self.time_steps}"
 
-    def _value(
-        self, option: VanillaOption, market: Market, model: PDEModel, half_width: float
-    ) -> float:
+    def _grid(
+        self,
+        option: VanillaOption,
+        market: Market,
+        model: PDEModel,
+        half_width: float,
+        barrier: tuple[float, Literal["up", "down"]] | None,
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], int]:
         spots, values, *_ = solve_pde(
-            option, market, model, self.space_steps, self.time_steps, half_width=half_width
+            option,
+            market,
+            model,
+            self.space_steps,
+            self.time_steps,
+            half_width=half_width,
+            barrier=barrier,
         )
-        return float(values[len(spots) // 2])
+        return spots, values, int(np.argmin(np.abs(spots - market.spot)))
 
-    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+    def _components(
+        self, option: Instrument, market: Market, model: PDEModel, half_width: float
+    ) -> list[tuple[float, NDArray[np.float64], NDArray[np.float64], int]]:
+        """(weight, spots, values, spot index) grids whose weighted sum is the option."""
+        if isinstance(option, VanillaOption):
+            return [(1.0, *self._grid(option, market, model, half_width, None))]
+        assert isinstance(option, BarrierOption)
+        vanilla = VanillaOption(option.vanilla, European(option.expiry))
+        if option.breached(market.spot):  # already knocked in (vanilla) or out (worthless)
+            return [
+                (
+                    1.0 if option.knock == "in" else 0.0,
+                    *self._grid(vanilla, market, model, half_width, None),
+                )
+            ]
+        out = (
+            1.0,
+            *self._grid(vanilla, market, model, half_width, (option.barrier, option.direction)),
+        )
+        if option.knock == "out":
+            return [out]
+        return [(1.0, *self._grid(vanilla, market, model, half_width, None)), (-1.0, *out[1:])]
+
+    def _value(
+        self, option: Instrument, market: Market, model: PDEModel, half_width: float
+    ) -> float:
+        return float(
+            sum(
+                w * values[i]
+                for w, _, values, i in self._components(option, market, model, half_width)
+            )
+        )
+
+    def price(self, option: Instrument, market: Market, model: Model) -> PricingResult:
         if not isinstance(model, BlackScholes | LocalVol):
             raise UnsupportedError(
                 f"The PDE engine solves Black–Scholes and local-volatility models, not "
                 f"{type(model).__name__}"
             )
+        if isinstance(option, BarrierOption):
+            if option.observations is not None:
+                raise UnsupportedError("The PDE engine prices continuously monitored barriers only")
+        elif not isinstance(option, VanillaOption):
+            raise UnsupportedError(f"The PDE engine does not price {type(option).__name__}")
         if option.expiry == 0:
+            if isinstance(option, BarrierOption):
+                raise ValueError("barrier options need a positive expiry")
             return PricingResult(float(option.payoff(market.spot)))
         if isinstance(model, BlackScholes) and model.volatility == 0:
             raise ValueError("the PDE engine needs positive volatility")
 
-        half_width = grid_half_width(option, market, model)
-        spots, values, _, _, _ = solve_pde(
-            option, market, model, self.space_steps, self.time_steps, half_width=half_width
+        reference = (
+            option
+            if isinstance(option, VanillaOption)
+            else VanillaOption(option.vanilla, European(option.expiry))
         )
-        mid = len(spots) // 2
+        half_width = grid_half_width(reference, market, model)
+        components = self._components(option, market, model, half_width)
+        value = sum(w * values[i] for w, _, values, i in components)
         if not self.greeks or isinstance(model, LocalVol):
             # Local vol has no single volatility to bump, so no vega; value only.
-            return PricingResult(float(values[mid]))
-        s = spots[mid]
-        dx = math.log(spots[1] / spots[0])
-        v_x = (values[mid + 1] - values[mid - 1]) / (2 * dx)
-        v_xx = (values[mid + 1] - 2 * values[mid] + values[mid - 1]) / dx**2
-        delta = v_x / s
-        gamma = (v_xx - v_x) / s**2
-        if option.is_american and values[mid] <= option.payoff(s) + 1e-12:
+            return PricingResult(float(value))
+
+        delta = gamma = 0.0
+        for w, spots, values, i in components:
+            dx = math.log(spots[1] / spots[0])
+            v_x = (values[i + 1] - values[i - 1]) / (2 * dx)
+            v_xx = (values[i + 1] - 2 * values[i] + values[i - 1]) / dx**2
+            delta += w * v_x / spots[i]
+            gamma += w * (v_xx - v_x) / spots[i] ** 2
+        s = market.spot
+        if (
+            isinstance(option, VanillaOption)
+            and option.is_american
+            and value <= option.payoff(s) + 1e-12
+        ):
             theta = 0.0  # exercised now: the option is worth its payoff and has no time decay
         else:
             # The PDE itself gives theta = dV/dt from the space derivatives, to second order:
             # theta = rV - (r - q) S delta - 1/2 sigma^2 S^2 gamma.
             theta = (
-                market.rate * values[mid]
+                market.rate * value
                 - (market.rate - market.dividend_yield) * s * delta
                 - 0.5 * model.volatility**2 * s * s * gamma
             )
 
         h = min(_VOL_BUMP, model.volatility / 2)
+        up_vol, down_vol = (replace(model, volatility=model.volatility + d) for d in (h, -h))
         vega = (
-            self._value(option, market, replace(model, volatility=model.volatility + h), half_width)
-            - self._value(
-                option, market, replace(model, volatility=model.volatility - h), half_width
-            )
+            self._value(option, market, up_vol, half_width)
+            - self._value(option, market, down_vol, half_width)
         ) / (2 * h)
+        up_rate, down_rate = (
+            replace(market, rate=market.rate + d) for d in (_RATE_BUMP, -_RATE_BUMP)
+        )
         rho = (
-            self._value(option, replace(market, rate=market.rate + _RATE_BUMP), model, half_width)
-            - self._value(option, replace(market, rate=market.rate - _RATE_BUMP), model, half_width)
+            self._value(option, up_rate, model, half_width)
+            - self._value(option, down_rate, model, half_width)
         ) / (2 * _RATE_BUMP)
 
         return PricingResult(
-            float(values[mid]),
+            float(value),
             greeks=Greeks(float(delta), float(gamma), vega, float(theta), rho),
             diagnostics={"space_steps": self.space_steps, "time_steps": self.time_steps},
         )

@@ -2,7 +2,7 @@ import { InfoIcon } from 'lucide-react'
 import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Greeks } from '@/lib/api'
 import { signed } from '@/lib/format'
-import { GREEKS } from './greeks'
+import { GREEKS } from '@/lib/greeks'
 
 interface GreekTilesProps {
   greeks: Greeks | null | undefined

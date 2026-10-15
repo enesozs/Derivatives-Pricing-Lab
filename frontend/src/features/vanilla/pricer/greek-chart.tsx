@@ -13,7 +13,7 @@ import { interpolate } from '@/components/charts/interpolate'
 import type { Greeks, ProfileResponse } from '@/lib/api'
 import { fixed, signed } from '@/lib/format'
 import { ChartCard } from '@/components/charts/chart-card'
-import { GREEKS } from '../greeks'
+import { GREEKS } from '@/lib/greeks'
 import type { VanillaParams } from './params'
 
 interface GreekChartProps {

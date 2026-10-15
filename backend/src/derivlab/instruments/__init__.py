@@ -1,5 +1,22 @@
 from .exercise import American, European, Exercise
+from .exotic import AsianOption, BarrierOption, DigitalOption, Exotic, LookbackOption
 from .payoffs import OptionKind, PlainVanilla
 from .vanilla import VanillaOption
 
-__all__ = ["American", "European", "Exercise", "OptionKind", "PlainVanilla", "VanillaOption"]
+#: Everything an engine may be asked to price.
+Instrument = VanillaOption | Exotic
+
+__all__ = [
+    "American",
+    "AsianOption",
+    "BarrierOption",
+    "DigitalOption",
+    "European",
+    "Exercise",
+    "Exotic",
+    "Instrument",
+    "LookbackOption",
+    "OptionKind",
+    "PlainVanilla",
+    "VanillaOption",
+]

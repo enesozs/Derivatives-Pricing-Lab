@@ -23,11 +23,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from derivlab.core.errors import UnsupportedError
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import Instrument, VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes, Model
 from derivlab.results import Greeks, PricingResult
 
+from .exotics import ExoticSettings, price_exotic
 from .paths import DISCRETISED_MODELS, simulate_paths
 
 
@@ -42,7 +43,12 @@ class MonteCarloEngine:
     #: Minimum time steps per year for models without an exact transition (Heston, local vol).
     steps_per_year: int = 100
 
-    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+    def price(self, option: Instrument, market: Market, model: Model) -> PricingResult:
+        if not isinstance(option, VanillaOption):
+            settings = ExoticSettings(
+                self.paths, self.seed, self.antithetic, self.control_variate, self.steps_per_year
+            )
+            return price_exotic(option, market, model, settings)
         if option.is_american:
             raise UnsupportedError(
                 "Monte Carlo cannot price early exercise yet (Longstaff–Schwartz is Phase 3)"

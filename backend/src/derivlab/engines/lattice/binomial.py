@@ -28,7 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from derivlab.core.errors import UnsupportedError
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import Instrument, VanillaOption
 from derivlab.market import Market
 from derivlab.models import BlackScholes, Model
 from derivlab.results import Greeks, PricingResult
@@ -157,7 +157,11 @@ class BinomialEngine:
         tree = tree_parameters(option, market, model, self.steps, self.scheme)
         return float(roll_back(option, market.spot, tree, keep=0)[0][1][0])
 
-    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+    def price(self, option: Instrument, market: Market, model: Model) -> PricingResult:
+        if not isinstance(option, VanillaOption):
+            raise UnsupportedError(
+                f"Binomial trees here price vanilla options, not {type(option).__name__}"
+            )
         if not isinstance(model, BlackScholes):
             raise UnsupportedError(
                 f"Binomial trees here assume Black–Scholes dynamics, not {type(model).__name__}"

@@ -10,7 +10,7 @@ Reference: Glasserman, Monte Carlo Methods in Financial Engineering, ch. 7.1.
 from dataclasses import replace
 
 from derivlab.engines import PricingEngine
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import Instrument
 from derivlab.market import Market
 from derivlab.models import BlackScholes
 from derivlab.results import Greeks
@@ -18,7 +18,7 @@ from derivlab.results import Greeks
 
 def bump_greeks(
     engine: PricingEngine,
-    option: VanillaOption,
+    option: Instrument,
     market: Market,
     model: BlackScholes,
     spot_bump: float = 0.01,
@@ -28,7 +28,7 @@ def bump_greeks(
 ) -> Greeks:
     """Greeks by re-pricing with bumped inputs. `spot_bump` is relative (1% of spot)."""
 
-    def value(o: VanillaOption = option, m: Market = market, md: BlackScholes = model) -> float:
+    def value(o: Instrument = option, m: Market = market, md: BlackScholes = model) -> float:
         return engine.price(o, m, md).value
 
     h = market.spot * spot_bump
@@ -47,8 +47,9 @@ def bump_greeks(
             - value(md=replace(model, volatility=model.volatility - dv))
         )
         / (2 * dv),
-        # Theta: one step forward in calendar time = one step less to expiry.
-        theta=(value(o=option.aged(dt)) - base) / dt,
+        # Theta: one step forward in calendar time = one step less to expiry. For averaging and
+        # monitored exotics this shrinks the schedule with the expiry (an approximation).
+        theta=(value(o=option.with_expiry(option.expiry - dt)) - base) / dt,
         rho=(
             value(m=replace(market, rate=market.rate + rate_bump))
             - value(m=replace(market, rate=market.rate - rate_bump))

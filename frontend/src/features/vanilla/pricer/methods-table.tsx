@@ -11,7 +11,7 @@ import {
 import type { MethodResult, PriceResponse } from '@/lib/api'
 import { fixed, milliseconds, scientific, signed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { GREEKS } from '../greeks'
+import { GREEKS } from '@/lib/greeks'
 
 const STATUS: Record<
   MethodResult['status'],

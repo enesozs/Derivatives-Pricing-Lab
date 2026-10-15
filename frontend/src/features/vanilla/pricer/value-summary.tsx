@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card'
 import type { PriceResponse } from '@/lib/api'
 import { fixed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { GreekTiles } from '../greek-tiles'
+import { GreekTiles } from '@/components/greek-tiles'
 import type { VanillaParams } from './params'
 
 interface ValueSummaryProps {

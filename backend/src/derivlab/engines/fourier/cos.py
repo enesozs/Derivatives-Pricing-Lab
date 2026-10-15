@@ -31,7 +31,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from derivlab.core.errors import UnsupportedError
-from derivlab.instruments import VanillaOption
+from derivlab.instruments import Instrument, VanillaOption
 from derivlab.market import Market
 from derivlab.models import Model
 from derivlab.results import PricingResult
@@ -135,7 +135,11 @@ class CosEngine:
     def label(self) -> str:
         return f"COS Fourier · {self.terms} terms"
 
-    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+    def price(self, option: Instrument, market: Market, model: Model) -> PricingResult:
+        if not isinstance(option, VanillaOption):
+            raise UnsupportedError(
+                f"The COS engine prices vanilla options, not {type(option).__name__}"
+            )
         if option.is_american:
             raise UnsupportedError("Fourier methods price European exercise only")
         if not hasattr(model, "characteristic_function"):

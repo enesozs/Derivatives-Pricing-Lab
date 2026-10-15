@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 const SECTIONS = [
   { label: 'Vanilla', to: '/vanilla', phase: null },
   { label: 'Volatility', to: '/volatility', phase: null },
-  { label: 'Exotics', to: null, phase: 3 },
+  { label: 'Exotics', to: '/exotics', phase: null },
   { label: 'Rates', to: null, phase: 5 },
 ] as const
 

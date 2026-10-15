@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { AppShell } from '@/components/app-shell'
 import NotFound from '@/components/not-found'
+import { ExoticsLayout } from '@/features/exotics/layout'
+import { AmericanPage, ExoticPricerPage } from '@/features/exotics/pages'
 import { VanillaLayout } from '@/features/vanilla/layout'
 import { VolatilityLayout } from '@/features/volatility/layout'
 import { CalibrationPage, ModelsPage, SurfacePage } from '@/features/volatility/pages'
@@ -28,6 +30,10 @@ export default function App() {
           <Route index element={<SurfacePage />} />
           <Route path="models" element={<ModelsPage />} />
           <Route path="calibration" element={<CalibrationPage />} />
+        </Route>
+        <Route path="exotics" element={<ExoticsLayout />}>
+          <Route index element={<ExoticPricerPage />} />
+          <Route path="american" element={<AmericanPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

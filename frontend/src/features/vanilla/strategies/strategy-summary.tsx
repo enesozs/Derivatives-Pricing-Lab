@@ -2,7 +2,7 @@ import { Card } from '@/components/ui/card'
 import type { StrategyResponse } from '@/lib/api'
 import { fixed, signed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { GreekTiles } from '../greek-tiles'
+import { GreekTiles } from '@/components/greek-tiles'
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
