@@ -29,25 +29,35 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0 and 1 are complete.** Next up: Phase 2 (volatility surfaces and models).
-- The *Vanilla* area has five routed pages:
-  - **Pricer** (`/vanilla`): five methods side by side (Black–Scholes, CRR and Leisen–Reimer
-    trees, Crank–Nicolson PDE, Monte Carlo), each with value, interval, error, Greeks and
-    runtime; value and Greek curves; tree/PDE/MC convergence studies.
-  - **Implied volatility** (`/vanilla/implied-vol`): price in, volatility out; no-arbitrage bounds.
-  - **Trees & grids** (`/vanilla/methods`): node-by-node binomial tree (3 schemes), PDE solution
-    slices over time, American early-exercise boundary.
-  - **Strategies** (`/vanilla/strategies`): 11 presets, leg editor (European/American legs),
-    P&L today/at horizon, breakevens, max profit/loss, spot × volatility stress heatmap.
-  - **Hedging** (`/vanilla/hedging`): discrete delta-hedging simulator with P&L distribution,
-    frequency study vs Derman–Kamal, sample paths, costs and volatility misspecification.
-- Library engines: `AnalyticEngine`, `BinomialEngine` (crr / jarrow-rudd / leisen-reimer),
-  `FiniteDifferenceEngine`, `MonteCarloEngine` (pathwise + likelihood-ratio Greeks); plus
-  `risk.bump_greeks`, `calibration.implied_volatility`, `portfolio.Strategy`,
-  `hedging.simulate_delta_hedge`, `research` convergence helpers.
-- Tests: 111 backend tests (incl. hypothesis no-arbitrage properties) and a Playwright smoke test
-  over every page (`make e2e`).
-- Theory: `docs/01-vanilla-options.md`.
+- **Phases 0, 1 and 2 are complete.** Next up: Phase 3 (path-dependent exotics).
+- **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
+  Hedging. See `docs/01-vanilla-options.md`.
+- **Volatility** area, 3 pages:
+  - **Surface** (`/volatility`): SPY snapshot / synthetic Heston / live Yahoo chain; cleaning
+    report, per-expiry smile with SVI fit, term structure, 3D implied and Dupire local-vol
+    surface, butterfly/calendar arbitrage flags.
+  - **Models** (`/volatility/models`): Black–Scholes, Heston, Merton, SABR playground; smiles
+    across expiries and the risk-neutral density.
+  - **Calibration** (`/volatility/calibration`): Heston (whole surface) or SABR (per expiry);
+    parameters, RMSE, Feller check, market-vs-model small multiples.
+  - See `docs/02-volatility.md`.
+- Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
+- Engines × models:
+
+  | Engine | BS | Heston | Merton | SABR | LocalVol | American |
+  |---|---|---|---|---|---|---|
+  | `AnalyticEngine` | ✓ Greeks | – | ✓ series | ✓ Hagan | – | – |
+  | `CosEngine` (Fourier) | ✓ | ✓ | ✓ | – | – | – |
+  | `BinomialEngine` | ✓ Greeks | – | – | – | – | ✓ |
+  | `FiniteDifferenceEngine` | ✓ Greeks | – | – | – | ✓ | ✓ |
+  | `MonteCarloEngine` | ✓ Greeks | ✓ Euler | ✓ exact | – | ✓ Euler | – |
+
+  Unsupported combinations raise `UnsupportedError`.
+- Data: `derivlab.data`, which covers raw chains, the Yahoo fetcher, the bundled
+  `snapshots/spy-2026-10-14.json`, synthetic Heston chains, and cleaning (parity forwards, OTM
+  selection, wing trimming).
+- Tests: 179 backend tests (incl. QuantLib cross-checks for Heston and SABR, and an end-to-end
+  synthetic → SVI → Dupire → PDE consistency test) and a Playwright smoke test over all 8 pages.
 
 ---
 
@@ -135,7 +145,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   ├── src/derivlab/                ✓ pricing library
 │   │   ├── core/                    ✓ errors.py (UnsupportedError), stats.py (normal cdf/pdf)
 │   │   ├── market.py                ✓ Market (flat rate). Becomes market/ with curves in Phase 5
-│   │   ├── models.py                ✓ BlackScholes. Becomes models/ when Heston etc. arrive (Phase 2)
+│   │   ├── models/                  ✓ black_scholes, heston, merton, sabr, local_vol (+ char. functions)
 │   │   ├── results.py               ✓ Greeks, PricingResult
 │   │   ├── instruments/             ✓ payoffs.py, exercise.py, vanilla.py; later exotic/, rates/
 │   │   ├── engines/
@@ -144,24 +154,26 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   │   ├── lattice/             ✓ binomial.py (CRR, Jarrow–Rudd, Leisen–Reimer; tree_nodes)
 │   │   │   ├── montecarlo/          ✓ paths.py, engine.py (pathwise/LR Greeks); later QMC, LSM
 │   │   │   ├── pde/                 ✓ Crank–Nicolson + Rannacher, American via penalty
-│   │   │   └── fourier/             Phase 2: Carr–Madan, COS
+│   │   │   └── fourier/             ✓ COS method (vectorised over strikes), risk-neutral density
 │   │   ├── research/                ✓ convergence.py, profile.py
-│   │   ├── calibration/             ✓ implied_vol.py; Phase 2: SVI, Heston/SABR calibration
+│   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
+│   │   │                              models (Heston/SABR calibration)
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
 │   │   ├── risk/                    ✓ bump.py (bump-and-revalue Greeks for any engine)
 │   │   ├── hedging/                 ✓ delta.py (discrete delta hedging, frequency study)
-│   │   └── data/                    Phase 2: option-chain loaders, synthetic data (labelled)
+│   │   └── data/                    ✓ chain, yahoo, synthetic, cleaning, snapshots/*.json
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
-│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging (Pydantic models)
-│   │   ├── routes/                  ✓ vanilla, strategies, hedging: one router per area
+│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility
+│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility: one router per area
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
 │   ├── package.json  vite.config.ts  components.json (coss/shadcn registry config)
 │   └── src/
 │       ├── main.tsx  App.tsx  index.css   ✓ providers + BrowserRouter, route table, theme tokens
-│       ├── lib/                     ✓ api.ts (typed client), format.ts, theme.tsx, utils.ts
+│       ├── lib/                     ✓ api.ts (typed client), format.ts, theme.tsx, input-mode.ts, utils.ts
+│       ├── types/                   ✓ echarts-gl.d.ts (the 3D library ships without types)
 │       ├── hooks/                   ✓ use-debounced-value.ts
 │       ├── components/
 │       │   ├── ui/                  ✓ coss components (vendored; edit sparingly)
@@ -179,8 +191,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │               ├── methods/         ✓ Trees & grids page
 │               ├── strategies/      ✓ presets in params.ts; scenario heatmap
 │               └── hedging/         ✓
+│           └── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options.md; one theory note per phase
+└── docs/                            ✓ 01-vanilla-options.md, 02-volatility.md; one note per phase
 ```
 
 ---
@@ -216,15 +229,22 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
   swaptions and short-rate models need them. Dropped: Richardson extrapolation, since
   Leisen–Reimer already gives smooth second-order convergence.
 
-### Phase 2: Volatility beyond a constant σ ← **next**
-- Real option-chain loading (yfinance) with cleaning; cached snapshots for reproducible tests
-- Implied-vol surface; SVI / SSVI fitting; static-arbitrage checks (calendar, butterfly)
-- Models: Merton jump-diffusion, Heston (Fourier: Carr–Madan FFT and COS), SABR (Hagan)
-- Dupire local volatility from the fitted surface
-- Calibration of Heston and SABR to market smiles, with error reporting
-- 3D surface charts (ECharts GL or Plotly, decide then)
+### Phase 2: Volatility beyond a constant σ ✓
+- [x] Option-chain data: Yahoo fetcher, bundled SPY snapshot, synthetic Heston chains (labelled)
+- [x] Cleaning: mid vs last-trade prices, staleness, parity forwards, OTM selection, wing
+      trimming, drop counts by reason
+- [x] SVI per expiry (quasi-explicit + direct, best of both); butterfly (Durrleman) and
+      calendar checks over quoted ranges
+- [x] Surface: total-variance interpolation, forward curve, Dupire local volatility
+- [x] Models: Heston, Merton, SABR, LocalVol; COS Fourier engine; Merton series and SABR in the
+      analytic engine; Heston/Merton/local-vol Monte Carlo; local vol in the PDE engine
+- [x] Calibration: Heston (vega-scaled price errors, ~0.5 s) and SABR (per expiry)
+- [x] UI: Surface (3D via echarts-gl), Models playground, Calibration; theory note
+      `docs/02-volatility.md`
+- Deferred: SSVI (global arbitrage-free parametrisation) and stochastic-local volatility,
+  revisited if Phase 3 exotics need them.
 
-### Phase 3: First exotics, path-dependent options
+### Phase 3: First exotics, path-dependent options ← **next**
 "Exotic" means anything beyond a plain call or put: the payoff depends on the price path, on several
 assets, has an unusual shape, or embeds features like early redemption.
 - Path infrastructure: time grids, Brownian bridge, Sobol quasi-random numbers, Heston paths (QE)
@@ -266,8 +286,9 @@ assets, has an unusual shape, or embeds features like early redemption.
 | API | FastAPI (`fastapi[standard]`) + Pydantic v2; `fastapi dev` / `fastapi run` CLI | Typed validation, OpenAPI docs at `/docs`, `app.frontend()` serves the built SPA |
 | Python env | venv + pip, deps in `backend/pyproject.toml` (hatchling) | uv is not installed on this machine; switching later is optional |
 | Python quality | pytest + hypothesis, ruff (lint + format, line 100), pyright (standard) | |
-| Reference oracle | QuantLib-Python, dev dependency only, from Phase 2–3 | Test exotics/rates against an independent library |
-| Market data | yfinance from Phase 2 | Free option chains |
+| Reference oracle | QuantLib-Python (dev dependency only) | Cross-checks Heston and SABR today; exotics and rates next |
+| Market data | yfinance (in the `api` extra) | Free, delayed option chains; bundled snapshots keep tests offline |
+| 3D charts | echarts-gl 2.1 (lazy-loaded on the Surface page) | WebGL surfaces for ECharts 6 |
 | Frontend build | Vite 8, React 19, TypeScript 6 | Fast dev server; `/api` proxied to :8000 |
 | Styling | Tailwind CSS v4 | Utility CSS; theme tokens in `src/index.css` |
 | Components | **coss UI** (Base UI primitives, shadcn-style copy-in components) | Accessible, polished, owned in-repo. Add with `npx shadcn@latest add @coss/<name>` |
@@ -288,8 +309,10 @@ Adding a runtime dependency needs a row (or a note) in this table saying why.
 1. **API types**: TypeScript types in `frontend/src/lib/api.ts` are hand-written to mirror
    `backend/src/derivlab_api/schemas/`. Generate them from OpenAPI (`openapi-typescript`) once it
    supports TypeScript 6, or sooner if drift becomes a problem.
-2. **Bundle size**: pages are code-split. ECharts (~200 kB gzipped) still loads with every page
-   because every page has charts; it becomes lazy automatically when a chart-free page exists.
+2. **Bundle size**: pages are code-split and echarts-gl loads only on the Surface page. Core
+   ECharts (~200 kB gzipped) loads with every page because every page has charts.
+3. **Snapshots**: one SPY snapshot (2026-10-14, last trades) is bundled. Refresh it with
+   `derivlab.data.yahoo.fetch_chain("SPY").save(...)` during US market hours for mid quotes.
 
 Resolved: folder renamed to `05-derivatives-pricing-lab`; package is `derivlab`; Streamlit dropped
 for React + FastAPI; pip + venv instead of uv for now; git initialised.

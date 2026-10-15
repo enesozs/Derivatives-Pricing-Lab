@@ -27,9 +27,10 @@ from typing import Literal
 import numpy as np
 from numpy.typing import NDArray
 
+from derivlab.core.errors import UnsupportedError
 from derivlab.instruments import VanillaOption
 from derivlab.market import Market
-from derivlab.models import BlackScholes
+from derivlab.models import BlackScholes, Model
 from derivlab.results import Greeks, PricingResult
 
 Scheme = Literal["crr", "jarrow-rudd", "leisen-reimer"]
@@ -156,7 +157,11 @@ class BinomialEngine:
         tree = tree_parameters(option, market, model, self.steps, self.scheme)
         return float(roll_back(option, market.spot, tree, keep=0)[0][1][0])
 
-    def price(self, option: VanillaOption, market: Market, model: BlackScholes) -> PricingResult:
+    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+        if not isinstance(model, BlackScholes):
+            raise UnsupportedError(
+                f"Binomial trees here assume Black–Scholes dynamics, not {type(model).__name__}"
+            )
         if option.expiry == 0:
             return PricingResult(float(option.payoff(market.spot)))
         if model.volatility == 0:

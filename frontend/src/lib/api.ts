@@ -231,6 +231,135 @@ export interface ScenarioResponse {
   pnl: number[][]
 }
 
+// --- Volatility -------------------------------------------------------------------------------
+
+export type SourceKind = 'snapshot' | 'synthetic' | 'live'
+
+export interface SourceRequest {
+  source: SourceKind
+  snapshot?: string | null
+  ticker: string
+  /** Risk-free rate for discounting; forwards come from put–call parity. */
+  rate: number
+}
+
+export interface SourcesResponse {
+  snapshots: { id: string; ticker: string; as_of: string; description: string }[]
+  live_available: boolean
+}
+
+export interface SmilePoint {
+  strike: number
+  log_moneyness: number
+  implied_vol: number
+  kind: OptionKind
+  price_source: 'mid' | 'last'
+}
+
+export interface SVIFitOut {
+  a: number
+  b: number
+  rho: number
+  m: number
+  sigma: number
+  rmse: number
+  butterfly_violations: number
+  k_min: number
+  k_max: number
+}
+
+export interface SurfaceSlice {
+  expiry: string
+  t: number
+  forward: number
+  discount: number
+  forward_method: 'parity' | 'fallback'
+  atm_vol: number
+  dropped: Record<string, number>
+  points: SmilePoint[]
+  svi: SVIFitOut
+  fit_k: number[]
+  fit_vol: number[]
+}
+
+export interface SurfaceResponse {
+  meta: {
+    ticker: string
+    spot: number
+    as_of: string
+    source: SourceKind
+    description: string
+    synthetic: boolean
+    price_basis: 'mid' | 'last' | 'mixed'
+  }
+  slices: SurfaceSlice[]
+  calendar_violations: { t_short: number; t_long: number; count: number }[]
+  grid: {
+    log_moneyness: number[]
+    maturities: number[]
+    implied_vol: number[][]
+    local_vol: number[][]
+    local_vol_fallbacks: number
+  }
+}
+
+export type CalibrationModel = 'heston' | 'sabr'
+
+export interface CalibrationRequest extends SourceRequest {
+  model: CalibrationModel
+  beta: number
+}
+
+export interface CalibrationResponse {
+  model: CalibrationModel
+  parameters: Record<string, number>[]
+  rmse: number
+  runtime_ms: number
+  feller_satisfied: boolean | null
+  slices: {
+    expiry: string
+    t: number
+    forward: number
+    strikes: number[]
+    log_moneyness: number[]
+    market_vol: number[]
+    model_vol: (number | null)[]
+    rmse: number
+  }[]
+}
+
+export type ModelParams =
+  | { model: 'black_scholes'; volatility: number }
+  | { model: 'heston'; v0: number; kappa: number; theta: number; xi: number; rho: number }
+  | {
+      model: 'merton'
+      volatility: number
+      intensity: number
+      jump_mean: number
+      jump_volatility: number
+    }
+  | { model: 'sabr'; alpha: number; beta: number; rho: number; nu: number }
+
+export interface ModelSmileRequest {
+  params: ModelParams
+  spot: number
+  rate: number
+  dividend_yield: number
+  expiries: number[]
+}
+
+export interface ModelSmileResponse {
+  model: string
+  density_spots: number[]
+  smiles: {
+    t: number
+    strikes: number[]
+    implied_vol: (number | null)[]
+    density: number[] | null
+  }[]
+  reference_density: number[]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -274,4 +403,15 @@ export const api = {
     post<PDEGridResponse>('/vanilla/pde-grid', req, signal),
   deltaHedge: (req: HedgeRequest, signal?: AbortSignal) =>
     post<HedgeResponse>('/hedging/delta', req, signal),
+  volSources: async (signal?: AbortSignal): Promise<SourcesResponse> => {
+    const response = await fetch('/api/volatility/sources', { signal })
+    if (!response.ok) throw new ApiError(`Request failed (${response.status})`)
+    return (await response.json()) as SourcesResponse
+  },
+  volSurface: (req: SourceRequest, signal?: AbortSignal) =>
+    post<SurfaceResponse>('/volatility/surface', req, signal),
+  calibrate: (req: CalibrationRequest, signal?: AbortSignal) =>
+    post<CalibrationResponse>('/volatility/calibrate', req, signal),
+  modelSmile: (req: ModelSmileRequest, signal?: AbortSignal) =>
+    post<ModelSmileResponse>('/volatility/model-smile', req, signal),
 }

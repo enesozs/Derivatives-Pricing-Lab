@@ -10,14 +10,15 @@ from pathlib import Path
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from .routes import hedging, strategies, vanilla
+from .routes import hedging, strategies, vanilla, volatility
 
-app = FastAPI(title="Derivatives Pricing Lab API", version="0.2.0")
+app = FastAPI(title="Derivatives Pricing Lab API", version="0.3.0")
 
 api = APIRouter(prefix="/api")
 api.include_router(vanilla.router)
 api.include_router(strategies.router)
 api.include_router(hedging.router)
+api.include_router(volatility.router)
 
 
 @api.get("/health")

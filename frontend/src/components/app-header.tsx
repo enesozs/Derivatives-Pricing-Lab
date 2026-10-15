@@ -10,12 +10,12 @@ import {
 import { useTheme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
 
-// Sections follow the roadmap in AGENTS.md; only Vanilla exists so far.
+// Sections follow the roadmap in AGENTS.md; later phases show as "Soon".
 const SECTIONS = [
-  { label: 'Vanilla', phase: null },
-  { label: 'Volatility', phase: 2 },
-  { label: 'Exotics', phase: 3 },
-  { label: 'Rates', phase: 5 },
+  { label: 'Vanilla', to: '/vanilla', phase: null },
+  { label: 'Volatility', to: '/volatility', phase: null },
+  { label: 'Exotics', to: null, phase: 3 },
+  { label: 'Rates', to: null, phase: 5 },
 ] as const
 
 function ApiStatus() {
@@ -57,8 +57,8 @@ export function AppHeader() {
         </NavLink>
         <nav aria-label="Sections" className={cn(segmentedControlRootClassName, 'hidden md:flex')}>
           {SECTIONS.map((s) =>
-            s.phase == null ? (
-              <NavLink key={s.label} to="/vanilla" className={item}>
+            s.to ? (
+              <NavLink key={s.label} to={s.to} className={item}>
                 {s.label}
               </NavLink>
             ) : (

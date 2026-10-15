@@ -2,6 +2,8 @@ import { Navigate, Route, Routes } from 'react-router'
 import { AppShell } from '@/components/app-shell'
 import NotFound from '@/components/not-found'
 import { VanillaLayout } from '@/features/vanilla/layout'
+import { VolatilityLayout } from '@/features/volatility/layout'
+import { CalibrationPage, ModelsPage, SurfacePage } from '@/features/volatility/pages'
 import {
   HedgingPage,
   ImpliedVolPage,
@@ -21,6 +23,11 @@ export default function App() {
           <Route path="methods" element={<MethodsPage />} />
           <Route path="strategies" element={<StrategiesPage />} />
           <Route path="hedging" element={<HedgingPage />} />
+        </Route>
+        <Route path="volatility" element={<VolatilityLayout />}>
+          <Route index element={<SurfacePage />} />
+          <Route path="models" element={<ModelsPage />} />
+          <Route path="calibration" element={<CalibrationPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

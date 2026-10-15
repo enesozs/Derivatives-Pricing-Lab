@@ -83,7 +83,10 @@ export function EChart({ option, ariaLabel, className }: EChartProps) {
   useEffect(() => {
     // Merge (not replace) so lines morph smoothly while a slider is dragged. The first draw
     // animates quickly; ECharts' 1 s default feels sluggish.
-    chart.current?.setOption({ animationDuration: 400, ...option }, { replaceMerge: ['series'] })
+    chart.current?.setOption(
+      { animationDuration: 400, ...leftAlignYAxisName(option) },
+      { replaceMerge: ['series'] },
+    )
   }, [option])
 
   return (
@@ -94,4 +97,12 @@ export function EChart({ option, ariaLabel, className }: EChartProps) {
       className={cn('h-72 w-full', className)}
     />
   )
+}
+
+/** A y-axis title is centred on the axis line by default and gets clipped at the card edge;
+ * start it at the axis instead so it always fits. */
+function leftAlignYAxisName(option: ChartOption): ChartOption {
+  const y = option.yAxis
+  if (!y || Array.isArray(y) || !('name' in y) || !y.name || 'nameLocation' in y) return option
+  return { ...option, yAxis: { ...y, nameTextStyle: { ...y.nameTextStyle, align: 'left' } } }
 }

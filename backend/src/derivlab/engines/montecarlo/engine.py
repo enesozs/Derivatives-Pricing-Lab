@@ -25,10 +25,10 @@ from numpy.typing import NDArray
 from derivlab.core.errors import UnsupportedError
 from derivlab.instruments import VanillaOption
 from derivlab.market import Market
-from derivlab.models import BlackScholes
+from derivlab.models import BlackScholes, Model
 from derivlab.results import Greeks, PricingResult
 
-from .paths import gbm_paths
+from .paths import DISCRETISED_MODELS, simulate_paths
 
 
 @dataclass(frozen=True)
@@ -39,8 +39,10 @@ class MonteCarloEngine:
     antithetic: bool = True
     control_variate: bool = True
     greeks: bool = True
+    #: Minimum time steps per year for models without an exact transition (Heston, local vol).
+    steps_per_year: int = 100
 
-    def price(self, option: VanillaOption, market: Market, model: BlackScholes) -> PricingResult:
+    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
         if option.is_american:
             raise UnsupportedError(
                 "Monte Carlo cannot price early exercise yet (Longstaff–Schwartz is Phase 3)"
@@ -50,14 +52,17 @@ class MonteCarloEngine:
             return PricingResult(float(option.payoff(market.spot)), stderr=0.0)
 
         rng = np.random.default_rng(self.seed)
-        spots = gbm_paths(market, model, t, self.steps, self.paths, rng, self.antithetic)
+        steps = self.steps
+        if isinstance(model, DISCRETISED_MODELS):
+            steps = max(steps, math.ceil(self.steps_per_year * t))
+        spots = simulate_paths(market, model, t, steps, self.paths, rng, self.antithetic)
         terminal = spots[:, -1]
         discount = market.discount(t)
         samples = discount * option.payoff(terminal)
 
         greeks = (
             self._greeks(option, market, model, terminal, samples)
-            if self.greeks and model.volatility > 0
+            if self.greeks and isinstance(model, BlackScholes) and model.volatility > 0
             else None
         )
 
@@ -80,7 +85,7 @@ class MonteCarloEngine:
             float(np.mean(samples)),
             stderr=stderr,
             greeks=greeks,
-            diagnostics={"paths": self.paths, "steps": self.steps, "seed": self.seed},
+            diagnostics={"paths": self.paths, "steps": steps, "seed": self.seed},
         )
 
     @staticmethod

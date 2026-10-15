@@ -15,6 +15,10 @@ tau = T with the theta-scheme:
   the solution falls below the payoff, then re-solves until the set of exercised nodes stops
   changing (usually 2-3 iterations per step).
 
+Local volatility: with sigma = sigma(S, t) the coefficients vary by node and step; they are
+re-evaluated every step at the step's midpoint in calendar time. This is how Dupire local-vol
+models are priced in practice, and it reproduces the surface they were built from.
+
 Boundaries: Dirichlet values from the asymptotic option value far in/out of the money.
 Error: O(dx^2 + dtau^2) for European options.
 References: Duffy, Finite Difference Methods in Financial Engineering, ch. 13-16;
@@ -28,10 +32,13 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import solve_banded
 
+from derivlab.core.errors import UnsupportedError
 from derivlab.instruments import VanillaOption
 from derivlab.market import Market
-from derivlab.models import BlackScholes
+from derivlab.models import BlackScholes, LocalVol, Model
 from derivlab.results import Greeks, PricingResult
+
+PDEModel = BlackScholes | LocalVol
 
 _PENALTY = 1e8
 _RANNACHER_STEPS = 2
@@ -65,21 +72,31 @@ def _boundaries(
     return low, high
 
 
+def _reference_volatility(option: VanillaOption, market: Market, model: PDEModel) -> float:
+    """A single volatility to size the grid with."""
+    if isinstance(model, BlackScholes):
+        return model.volatility
+    probe = np.array([market.spot])
+    samples = [float(model(probe, t)[0]) for t in (0.0, 0.5 * option.expiry, option.expiry)]
+    return max(max(samples), 0.05)
+
+
 def grid_half_width(
-    option: VanillaOption, market: Market, model: BlackScholes, width: float = 5.0
+    option: VanillaOption, market: Market, model: PDEModel, width: float = 5.0
 ) -> float:
     """Half-width of the log-spot grid: `width` std devs, wide enough to contain the strike.
 
     Bumped re-pricings reuse the base grid so the strike keeps its position between nodes.
     """
-    spread = width * model.volatility * math.sqrt(option.expiry)
+    sigma = _reference_volatility(option, market, model)
+    spread = width * sigma * math.sqrt(option.expiry)
     return max(spread, 1.5 * abs(math.log(option.payoff.strike / market.spot)) + 0.1)
 
 
 def solve_pde(
     option: VanillaOption,
     market: Market,
-    model: BlackScholes,
+    model: PDEModel,
     space_steps: int = 400,
     time_steps: int = 200,
     width: float = 5.0,
@@ -95,7 +112,7 @@ def solve_pde(
     """
     if space_steps < 20 or time_steps < 10:
         raise ValueError("grid too small: need at least 20 space and 10 time steps")
-    t, sigma = option.expiry, model.volatility
+    t = option.expiry
     space_steps += space_steps % 2  # even, so today's spot is the middle node
     if half_width is None:
         half_width = grid_half_width(option, market, model, width)
@@ -106,10 +123,20 @@ def solve_pde(
     payoff = option.payoff(spots)
     values = payoff.copy()
 
-    # Spatial operator L as three diagonals (sub, main, super) on interior nodes.
-    alpha = 0.5 * sigma**2 / dx**2
-    beta = (market.rate - market.dividend_yield - 0.5 * sigma**2) / (2 * dx)
-    sub, main, sup = alpha - beta, -2 * alpha - market.rate, alpha + beta
+    carry = market.rate - market.dividend_yield
+    inner_spots = spots[1:-1]
+
+    def operator(calendar_time: float):
+        """Spatial operator L as three diagonals (sub, main, super) on interior nodes."""
+        if isinstance(model, BlackScholes):
+            variance = np.full_like(inner_spots, model.volatility**2)
+        else:
+            variance = model(inner_spots, max(calendar_time, 0.0)) ** 2
+        alpha = 0.5 * variance / dx**2
+        beta = (carry - 0.5 * variance) / (2 * dx)
+        return alpha - beta, -2 * alpha - market.rate, alpha + beta
+
+    sub, main, sup = operator(0.0)
 
     n_inner = space_steps - 1
     dtau = t / time_steps
@@ -127,18 +154,20 @@ def solve_pde(
         previous = values
         tau_new = tau + step
         low_new, high_new = _boundaries(option, market, spots[0], spots[-1], tau_new)
+        if isinstance(model, LocalVol):
+            sub, main, sup = operator(t - (tau + 0.5 * step))
 
         inner = values[1:-1]
         explicit = (1 - theta) * step
         rhs = inner + explicit * (sub * values[:-2] + main * inner + sup * values[2:])
         implicit = theta * step
-        rhs[0] += implicit * sub * low_new
-        rhs[-1] += implicit * sup * high_new
+        rhs[0] += implicit * sub[0] * low_new
+        rhs[-1] += implicit * sup[-1] * high_new
 
         bands = np.zeros((3, n_inner))
-        bands[0, 1:] = -implicit * sup
+        bands[0, 1:] = -implicit * sup[:-1]
         bands[1, :] = 1 - implicit * main
-        bands[2, :-1] = -implicit * sub
+        bands[2, :-1] = -implicit * sub[1:]
 
         if option.is_american:
             target = payoff[1:-1]
@@ -188,17 +217,22 @@ class FiniteDifferenceEngine:
         return f"Crank–Nicolson PDE · {self.space_steps}×{self.time_steps}"
 
     def _value(
-        self, option: VanillaOption, market: Market, model: BlackScholes, half_width: float
+        self, option: VanillaOption, market: Market, model: PDEModel, half_width: float
     ) -> float:
         spots, values, *_ = solve_pde(
             option, market, model, self.space_steps, self.time_steps, half_width=half_width
         )
         return float(values[len(spots) // 2])
 
-    def price(self, option: VanillaOption, market: Market, model: BlackScholes) -> PricingResult:
+    def price(self, option: VanillaOption, market: Market, model: Model) -> PricingResult:
+        if not isinstance(model, BlackScholes | LocalVol):
+            raise UnsupportedError(
+                f"The PDE engine solves Black–Scholes and local-volatility models, not "
+                f"{type(model).__name__}"
+            )
         if option.expiry == 0:
             return PricingResult(float(option.payoff(market.spot)))
-        if model.volatility == 0:
+        if isinstance(model, BlackScholes) and model.volatility == 0:
             raise ValueError("the PDE engine needs positive volatility")
 
         half_width = grid_half_width(option, market, model)
@@ -206,7 +240,8 @@ class FiniteDifferenceEngine:
             option, market, model, self.space_steps, self.time_steps, half_width=half_width
         )
         mid = len(spots) // 2
-        if not self.greeks:
+        if not self.greeks or isinstance(model, LocalVol):
+            # Local vol has no single volatility to bump, so no vega; value only.
             return PricingResult(float(values[mid]))
         s = spots[mid]
         dx = math.log(spots[1] / spots[0])

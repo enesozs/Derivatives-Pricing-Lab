@@ -93,6 +93,28 @@ def main() -> int:
         expect(page.get_by_text("Stress test: P&L by spot and volatility")).to_be_visible()
         shot(page, "strategies")
 
+        # Volatility: surface from the bundled snapshot, then synthetic data.
+        page.get_by_role("link", name="Volatility", exact=True).click()
+        expect(page.get_by_role("heading", name="Implied volatility surface")).to_be_visible()
+        expect(page.get_by_text("From raw quotes to a smile")).to_be_visible()
+        expect(page.get_by_role("cell", name="Jan 19, 2029")).to_be_visible(timeout=15_000)
+        page.get_by_role("radio", name="Synthetic").click()
+        expect(page.get_by_text("Synthetic data")).to_be_visible(timeout=15_000)
+        shot(page, "volatility-surface")
+
+        # Models playground: switching models re-prices the smile.
+        page.get_by_role("link", name="Models").click()
+        page.get_by_role("radio", name="Merton").click()
+        expect(page.get_by_text("Jumps per year λ")).to_be_visible()
+        shot(page, "volatility-models")
+
+        # Calibration: Heston on synthetic data must fit almost perfectly.
+        page.get_by_role("link", name="Calibration").click()
+        expect(page.get_by_text("Feller condition")).to_be_visible(timeout=15_000)
+        rmse = float(hero.inner_text())
+        assert rmse < 0.3, f"Heston fit to its own synthetic data should be tight, got {rmse}"
+        shot(page, "volatility-calibration")
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()
