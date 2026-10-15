@@ -1,0 +1,5 @@
+dist
+node_modules
+src/components/ui
+src/lib/segmented-control.ts
+src/lib/utils.ts
