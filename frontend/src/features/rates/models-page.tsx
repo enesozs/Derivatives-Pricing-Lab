@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -514,6 +515,7 @@ export default function ShortRatePage() {
                   vols. Two parameters can’t match six quotes exactly: the residual is the model’s
                   limit.
                 </CardDescription>
+                <ChartGuide heading="Calibrate Hull–White to caps" noun="card" />
               </div>
               <Button
                 variant="outline"

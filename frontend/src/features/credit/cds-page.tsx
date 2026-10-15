@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -298,6 +299,7 @@ export default function CdsPage() {
                 triangle, spread ÷ (1 − recovery), is the average hazard rate to that maturity, a
                 quick check.
               </CardDescription>
+              <ChartGuide heading="Bootstrapped default curve" noun="table" />
             </CardHeader>
             <div className="overflow-x-auto px-2 pb-2">
               <Table>

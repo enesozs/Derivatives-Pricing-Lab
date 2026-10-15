@@ -7,7 +7,7 @@ import { MultiAssetLayout } from '@/features/multi-asset/layout'
 import { CorrelationPage, QuantoPage } from '@/features/multi-asset/pages'
 import { CreditLayout } from '@/features/credit/layout'
 import { LearnLayout } from '@/features/learn/layout'
-import { ChapterPage, CoursePage } from '@/features/learn/pages'
+import { ChapterPage, CoursePage, GlossaryPage, StartPage } from '@/features/learn/pages'
 import { CdsPage, XvaPage } from '@/features/credit/pages'
 import { RatesLayout } from '@/features/rates/layout'
 import { StructuredLayout } from '@/features/structured/layout'
@@ -74,7 +74,10 @@ export default function App() {
         </Route>
         <Route path="learn" element={<LearnLayout />}>
           <Route index element={<CoursePage />} />
-          <Route path=":chapterId" element={<ChapterPage />} />
+          <Route path="start" element={<StartPage />} />
+          <Route path="glossary" element={<GlossaryPage />} />
+          <Route path=":chapterId" element={<ChapterPage tab="pages" />} />
+          <Route path=":chapterId/theory" element={<ChapterPage tab="theory" />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

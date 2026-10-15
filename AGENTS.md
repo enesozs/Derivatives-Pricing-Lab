@@ -86,10 +86,15 @@ should explain *why*, not just *what*.
   - **Counterparty risk** (`/credit/xva`): Hull–White exposure simulation of a swap; EPE/PFE
     profile, sample paths, CVA/DVA by year, collateral threshold, swaption check of exposure.
   - See `docs/07-credit.md`.
-- **Learn** (`/learn`): a 7-chapter course. Each chapter renders its `docs/` note in the app
-  (markdown + KaTeX math, section sidebar) beside 3–4 guided experiments that link to the pages;
-  chapters can be marked done (stored in the browser). Every area's tab row links to its chapter
-  ("Theory behind this area", `components/area-nav.tsx`).
+- **Learn** (`/learn`): an educational course on using the lab.
+  - **Start here** (`/learn/start`): the shared page layout, units, chart conventions, what
+    Monte Carlo intervals mean, and what the numbers are not (risk-neutral ≠ forecast).
+  - **7 chapters**, each with two tabs: *Using the pages* (a tour of every page in the area:
+    purpose, workflow, and an annotated screenshot whose numbered regions are each explained)
+    and *Theory* (the `docs/` note rendered with KaTeX). 3–4 guided experiments per chapter.
+  - **Glossary** (`/learn/glossary`): ~75 searchable terms, each linked to a page.
+  - Every chart and table card has a "How to read this chart/table" toggle (`ChartGuide`) with
+    the same text as the tour; every area's tab row links to its chapter ("Learn this area").
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -275,6 +280,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
 │       │   ├── greek-tiles.tsx      ✓ shared by every area (metadata in lib/greeks.ts)
 │       │   ├── area-nav.tsx         ✓ every area's tab row + link to its Learn chapter
+│       │   ├── chart-guide.tsx      ✓ "How to read this chart" toggle (text from content/guides)
 │       │   ├── model-section.tsx    ✓ Black–Scholes / Heston panel (exotics, structured)
 │       │   ├── stat-grid.tsx        ✓ hairline stat tiles (rates, structured)
 │       │   └── app-shell, app-header, page-header, panel-section, param-control,
@@ -294,9 +300,13 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │           ├── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
 │           ├── structured/          ✓ five pages + market-section.tsx
 │           ├── credit/              ✓ cds-page, xva-page
-│           └── learn/               ✓ chapters.ts (course + experiments), markdown.tsx, course and
-│                                      chapter pages, progress.ts
+│           └── learn/               ✓ chapters.ts (course + experiments), start, glossary, course and
+│                                      chapter pages, page-tour + annotated-screen, screens.json
+│       ├── content/                 ✓ guides/ (one PageGuide per page: regions, how to read them),
+│                                      glossary.ts
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
+├── e2e/learn_screens.py             ✓ Learn screenshots + region boxes (`make learn-shots`)
+├── frontend/public/learn/*.jpg      ✓ one screenshot per page (generated)
 └── docs/                            ✓ 01-vanilla-options … 07-credit; one note per phase
 ```
 
@@ -406,6 +416,8 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - [x] In-app course: the `docs/` notes rendered with math (react-markdown + KaTeX), section
       navigation, guided experiments per chapter, progress marks
 - [x] Shared `AreaNav` with a link from every area to its chapter
+- [x] Page tours: annotated screenshots of all 23 pages, region-by-region reading guides,
+      "How to read this chart" in the app, Start-here chapter and glossary
 
 ### Possible extensions (not scheduled)
 - Wrong-way risk, netting sets and FVA/KVA in the xVA engine
@@ -503,6 +515,10 @@ for React + FastAPI; pip + venv instead of uv for now; git initialised.
   Write display math as `$$…$$` (fenced on its own lines or inline; both render) and avoid bare
   `$` for currency. When a page's control labels change, update the experiment steps in
   `features/learn/chapters.ts`; they quote those labels.
+- Page guides live in `src/content/guides/<area>.ts`, keyed by page path and card heading.
+  When you add, rename or remove a chart card, update its region there (the toggle and the tour
+  both disappear silently otherwise), then run `make learn-shots` to refresh the screenshots and
+  region boxes. Guide text quotes default-input numbers; re-check them if defaults change.
 
 **Adding a feature, end to end**
 1. Library: instrument/model/engine plus tests (reference, consistency, convergence).
@@ -523,6 +539,7 @@ make install   # backend venv + editable install with [api,dev]; npm install
 make dev       # API on :8000 and Vite on :5173 → open http://localhost:5173
 make test      # backend pytest (fast tests)
 make e2e       # Playwright smoke test over every page (needs `make dev` running + Chrome)
+make learn-shots  # refresh the Learn screenshots after UI changes (needs `make dev`)
 make lint      # ruff format/check, pyright, tsc, oxlint, prettier --check
 make check     # lint + test + frontend build
 make serve     # build the UI and serve everything from FastAPI (`fastapi run`) on :8000

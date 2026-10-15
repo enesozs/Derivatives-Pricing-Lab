@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -407,6 +408,7 @@ export default function RiskPage() {
                 Book Greeks
               </CardTitle>
               <CardDescription>In currency, for the moves a risk manager watches.</CardDescription>
+              <ChartGuide heading="Book Greeks" noun="card" />
             </CardHeader>
             <div className="px-6 pb-6">
               <StatGrid className="grid-cols-2 xl:grid-cols-4">
@@ -445,6 +447,7 @@ export default function RiskPage() {
               <CardDescription>
                 Values and risks per position; the book is their sum.
               </CardDescription>
+              <ChartGuide heading="Positions" noun="table" />
             </CardHeader>
             <div className="overflow-x-auto px-2 pb-2">
               <Table>
@@ -484,6 +487,7 @@ export default function RiskPage() {
                 and fails for large ones, especially near barriers, which is why risk is stressed by
                 full revaluation.
               </CardDescription>
+              <ChartGuide heading="Scenarios: full revaluation against the Greeks" noun="table" />
             </CardHeader>
             <div className="overflow-x-auto px-2 pb-2">
               <Table>

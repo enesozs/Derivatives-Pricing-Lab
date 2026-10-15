@@ -50,7 +50,7 @@ export function AreaNav({
         className="inline-flex items-center gap-1.5 text-muted-foreground text-sm hover:text-foreground"
       >
         <BookOpenIcon className="size-4" aria-hidden="true" />
-        Theory behind this area
+        Learn this area
       </Link>
     </div>
   )

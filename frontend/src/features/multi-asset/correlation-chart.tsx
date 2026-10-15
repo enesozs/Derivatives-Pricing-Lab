@@ -56,6 +56,8 @@ export function CorrelationChart({
         min: grid[0],
         max: grid[grid.length - 1],
         ...axis,
+        // The grid ends at uneven values (e.g. 0.95); their labels would collide with round ticks.
+        axisLabel: { ...axis.axisLabel, showMinLabel: false, showMaxLabel: false },
         splitLine: { show: false },
       },
       yAxis: { type: 'value', name: 'Value', scale: true, ...axis },

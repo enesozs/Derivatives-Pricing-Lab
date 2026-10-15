@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -508,6 +509,7 @@ export default function LinearPage() {
                 Price from the curve; the yield is the single rate that gives the same price.
                 Duration and convexity are measured against that yield.
               </CardDescription>
+              <ChartGuide heading="Bond analytics" noun="card" />
             </CardHeader>
             <CardPanel className="pt-0">
               <StatGrid className="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">

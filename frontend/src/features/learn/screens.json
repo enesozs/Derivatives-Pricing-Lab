@@ -1,0 +1,1144 @@
+{
+ "vanilla-pricer": {
+  "path": "/vanilla",
+  "width": 1280,
+  "height": 2045,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1032
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     231
+    ]
+   },
+   {
+    "key": "Value across spot",
+    "box": [
+     368,
+     502,
+     432,
+     484
+    ]
+   },
+   {
+    "key": "Delta across spot",
+    "box": [
+     824,
+     502,
+     432,
+     484
+    ]
+   },
+   {
+    "key": "Same option, five methods",
+    "box": [
+     368,
+     1010,
+     888,
+     385
+    ]
+   },
+   {
+    "key": "Grid and tree convergence",
+    "box": [
+     368,
+     1475,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Monte Carlo convergence",
+    "box": [
+     824,
+     1475,
+     432,
+     490
+    ]
+   }
+  ]
+ },
+ "vanilla-implied-vol": {
+  "path": "/vanilla/implied-vol",
+  "width": 1280,
+  "height": 1263,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     227,
+     320,
+     701
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     227,
+     888,
+     160
+    ]
+   },
+   {
+    "key": "What the solver inverts",
+    "box": [
+     368,
+     411,
+     888,
+     470
+    ]
+   },
+   {
+    "key": "How implied volatility works",
+    "box": [
+     368,
+     905,
+     888,
+     278
+    ]
+   }
+  ]
+ },
+ "vanilla-methods": {
+  "path": "/vanilla/methods",
+  "width": 1280,
+  "height": 1465,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     765
+    ]
+   },
+   {
+    "key": "Binomial tree, node by node",
+    "box": [
+     368,
+     247,
+     888,
+     604
+    ]
+   },
+   {
+    "key": "The PDE solution as time runs out",
+    "box": [
+     368,
+     875,
+     432,
+     510
+    ]
+   },
+   {
+    "key": "Early-exercise boundary",
+    "box": [
+     824,
+     875,
+     432,
+     510
+    ]
+   }
+  ]
+ },
+ "vanilla-strategies": {
+  "path": "/vanilla/strategies",
+  "width": 1280,
+  "height": 2048,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     352,
+     1721
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     400,
+     247,
+     856,
+     265
+    ]
+   },
+   {
+    "key": "Profit and loss across spot",
+    "box": [
+     400,
+     536,
+     856,
+     566
+    ]
+   },
+   {
+    "key": "Stress test: P&L by spot and volatility",
+    "box": [
+     400,
+     1126,
+     856,
+     578
+    ]
+   },
+   {
+    "key": "Legs",
+    "box": [
+     400,
+     1728,
+     856,
+     240
+    ]
+   }
+  ]
+ },
+ "vanilla-hedging": {
+  "path": "/vanilla/hedging",
+  "width": 1280,
+  "height": 1496,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1169
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     161
+    ]
+   },
+   {
+    "key": "Distribution of hedged P&L",
+    "box": [
+     368,
+     432,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Hedge more often, err less, slowly",
+    "box": [
+     824,
+     432,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Three sample spot paths",
+    "box": [
+     368,
+     946,
+     432,
+     470
+    ]
+   },
+   {
+    "key": "Their hedged P&L, marked to market",
+    "box": [
+     824,
+     946,
+     432,
+     470
+    ]
+   }
+  ]
+ },
+ "volatility-surface": {
+  "path": "/volatility",
+  "width": 1280,
+  "height": 2423,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     295
+    ]
+   },
+   {
+    "key": "Volatility smile · Nov 13, 2026",
+    "box": [
+     368,
+     341,
+     518,
+     560
+    ]
+   },
+   {
+    "key": "Term structure",
+    "box": [
+     910,
+     341,
+     346,
+     560
+    ]
+   },
+   {
+    "key": "The volatility surface",
+    "box": [
+     368,
+     925,
+     888,
+     624
+    ]
+   },
+   {
+    "key": "From raw quotes to a smile",
+    "box": [
+     368,
+     1573,
+     888,
+     770
+    ]
+   }
+  ]
+ },
+ "volatility-models": {
+  "path": "/volatility/models",
+  "width": 1280,
+  "height": 1521,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     752
+    ]
+   },
+   {
+    "key": "The smile this model implies",
+    "box": [
+     368,
+     247,
+     888,
+     566
+    ]
+   },
+   {
+    "key": "Where the model thinks the price will end up",
+    "box": [
+     368,
+     837,
+     888,
+     604
+    ]
+   }
+  ]
+ },
+ "volatility-calibration": {
+  "path": "/volatility/calibration",
+  "width": 1280,
+  "height": 2056,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     438
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     341,
+     888,
+     275
+    ]
+   },
+   {
+    "key": "Market vs model, expiry by expiry",
+    "box": [
+     368,
+     640,
+     888,
+     1336
+    ]
+   }
+  ]
+ },
+ "exotics-pricer": {
+  "path": "/exotics",
+  "width": 1280,
+  "height": 1452,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1125
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     215
+    ]
+   },
+   {
+    "key": "Value across spot",
+    "box": [
+     368,
+     486,
+     432,
+     522
+    ]
+   },
+   {
+    "key": "How the payoff works, path by path",
+    "box": [
+     824,
+     486,
+     432,
+     522
+    ]
+   },
+   {
+    "key": "Which methods can price it",
+    "box": [
+     368,
+     1032,
+     888,
+     340
+    ]
+   }
+  ]
+ },
+ "exotics-american": {
+  "path": "/exotics/american",
+  "width": 1280,
+  "height": 1540,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1213
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     161
+    ]
+   },
+   {
+    "key": "Where the simulation chooses to exercise",
+    "box": [
+     368,
+     432,
+     888,
+     502
+    ]
+   },
+   {
+    "key": "Convergence in paths",
+    "box": [
+     368,
+     958,
+     888,
+     502
+    ]
+   }
+  ]
+ },
+ "multi-asset-correlation": {
+  "path": "/multi-asset",
+  "width": 1280,
+  "height": 1179,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     352,
+     852
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     400,
+     247,
+     856,
+     258
+    ]
+   },
+   {
+    "key": "Price against correlation",
+    "box": [
+     400,
+     529,
+     416,
+     510
+    ]
+   },
+   {
+    "key": "Joint scenarios at expiry",
+    "box": [
+     840,
+     529,
+     416,
+     510
+    ]
+   }
+  ]
+ },
+ "multi-asset-quanto": {
+  "path": "/multi-asset/quanto",
+  "width": 1280,
+  "height": 1147,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     820
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     161
+    ]
+   },
+   {
+    "key": "Price against correlation",
+    "box": [
+     368,
+     432,
+     888,
+     442
+    ]
+   }
+  ]
+ },
+ "rates-curves": {
+  "path": "/rates",
+  "width": 1280,
+  "height": 1453,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     352,
+     1126
+    ]
+   },
+   {
+    "key": "Zero and forward curves",
+    "box": [
+     400,
+     365,
+     856,
+     502
+    ]
+   },
+   {
+    "key": "Discount factors",
+    "box": [
+     400,
+     891,
+     416,
+     482
+    ]
+   },
+   {
+    "key": "Bootstrapped nodes",
+    "box": [
+     840,
+     891,
+     416,
+     482
+    ]
+   }
+  ]
+ },
+ "rates-linear": {
+  "path": "/rates/linear",
+  "width": 1280,
+  "height": 1861,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1534
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     287,
+     888,
+     161
+    ]
+   },
+   {
+    "key": "Cash flows",
+    "box": [
+     368,
+     472,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Value if rates move",
+    "box": [
+     824,
+     472,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Bond analytics",
+    "box": [
+     368,
+     986,
+     888,
+     269
+    ]
+   },
+   {
+    "key": "Price against yield",
+    "box": [
+     368,
+     1279,
+     888,
+     502
+    ]
+   }
+  ]
+ },
+ "rates-options": {
+  "path": "/rates/options",
+  "width": 1280,
+  "height": 1081,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     754
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     287,
+     888,
+     160
+    ]
+   },
+   {
+    "key": "One option per period",
+    "box": [
+     368,
+     471,
+     432,
+     530
+    ]
+   },
+   {
+    "key": "What each model assumes about the smile",
+    "box": [
+     824,
+     471,
+     432,
+     530
+    ]
+   }
+  ]
+ },
+ "rates-models": {
+  "path": "/rates/models",
+  "width": 1280,
+  "height": 2204,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1877
+    ]
+   },
+   {
+    "key": "2Y into 5Y payer swaption under Hull–White",
+    "box": [
+     368,
+     287,
+     888,
+     231
+    ]
+   },
+   {
+    "key": "Hull–White short rate",
+    "box": [
+     368,
+     542,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Vasicek short rate",
+    "box": [
+     824,
+     542,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Does the model fit today’s curve?",
+    "box": [
+     368,
+     1056,
+     888,
+     470
+    ]
+   },
+   {
+    "key": "Calibrate Hull–White to caps",
+    "box": [
+     368,
+     1550,
+     888,
+     574
+    ]
+   }
+  ]
+ },
+ "structured-autocallable": {
+  "path": "/structured",
+  "width": 1280,
+  "height": 1565,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     267,
+     320,
+     1218
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     267,
+     888,
+     238
+    ]
+   },
+   {
+    "key": "When does the note end?",
+    "box": [
+     368,
+     529,
+     888,
+     470
+    ]
+   },
+   {
+    "key": "What the investor ends up with",
+    "box": [
+     368,
+     1023,
+     432,
+     462
+    ]
+   },
+   {
+    "key": "Fair coupon against volatility",
+    "box": [
+     824,
+     1023,
+     432,
+     462
+    ]
+   }
+  ]
+ },
+ "structured-reverse-convertible": {
+  "path": "/structured/reverse-convertible",
+  "width": 1280,
+  "height": 1342,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     320,
+     1015
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     247,
+     888,
+     204
+    ]
+   },
+   {
+    "key": "What the note is made of",
+    "box": [
+     368,
+     475,
+     888,
+     253
+    ]
+   },
+   {
+    "key": "What you get back at maturity",
+    "box": [
+     368,
+     752,
+     432,
+     510
+    ]
+   },
+   {
+    "key": "Fair coupon against volatility",
+    "box": [
+     824,
+     752,
+     432,
+     510
+    ]
+   }
+  ]
+ },
+ "structured-cliquet": {
+  "path": "/structured/cliquet",
+  "width": 1280,
+  "height": 1323,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     267,
+     320,
+     976
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     267,
+     888,
+     145
+    ]
+   },
+   {
+    "key": "The building block: a forward-start option",
+    "box": [
+     368,
+     436,
+     888,
+     253
+    ]
+   },
+   {
+    "key": "Value against the local cap",
+    "box": [
+     368,
+     712,
+     432,
+     490
+    ]
+   },
+   {
+    "key": "Total payoff across paths",
+    "box": [
+     824,
+     712,
+     432,
+     490
+    ]
+   }
+  ]
+ },
+ "structured-variance": {
+  "path": "/structured/variance",
+  "width": 1280,
+  "height": 1673,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     267,
+     320,
+     1326
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     267,
+     888,
+     238
+    ]
+   },
+   {
+    "key": "The smile the options are priced on",
+    "box": [
+     368,
+     529,
+     432,
+     530
+    ]
+   },
+   {
+    "key": "The replicating strip",
+    "box": [
+     824,
+     529,
+     432,
+     530
+    ]
+   },
+   {
+    "key": "More options, smaller error",
+    "box": [
+     368,
+     1083,
+     432,
+     510
+    ]
+   },
+   {
+    "key": "Realised volatility across paths",
+    "box": [
+     824,
+     1083,
+     432,
+     510
+    ]
+   }
+  ]
+ },
+ "structured-risk": {
+  "path": "/structured/risk",
+  "width": 1280,
+  "height": 1938,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     247,
+     352,
+     1611
+    ]
+   },
+   {
+    "key": "Book Greeks",
+    "box": [
+     400,
+     247,
+     856,
+     257
+    ]
+   },
+   {
+    "key": "Positions",
+    "box": [
+     400,
+     528,
+     856,
+     310
+    ]
+   },
+   {
+    "key": "Stress grid: book P&L by spot and volatility",
+    "box": [
+     400,
+     862,
+     856,
+     538
+    ]
+   },
+   {
+    "key": "Scenarios: full revaluation against the Greeks",
+    "box": [
+     400,
+     1424,
+     856,
+     435
+    ]
+   }
+  ]
+ },
+ "credit-cds": {
+  "path": "/credit",
+  "width": 1280,
+  "height": 1515,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     267,
+     352,
+     1168
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     400,
+     267,
+     856,
+     238
+    ]
+   },
+   {
+    "key": "Survival probability",
+    "box": [
+     400,
+     529,
+     416,
+     482
+    ]
+   },
+   {
+    "key": "Hazard rate",
+    "box": [
+     840,
+     529,
+     416,
+     482
+    ]
+   },
+   {
+    "key": "Bootstrapped default curve",
+    "box": [
+     400,
+     1035,
+     856,
+     400
+    ]
+   }
+  ]
+ },
+ "credit-xva": {
+  "path": "/credit/xva",
+  "width": 1280,
+  "height": 1650,
+  "regions": [
+   {
+    "key": "panel",
+    "box": [
+     24,
+     267,
+     320,
+     1303
+    ]
+   },
+   {
+    "key": "hero",
+    "box": [
+     368,
+     267,
+     888,
+     255
+    ]
+   },
+   {
+    "key": "Exposure profile",
+    "box": [
+     368,
+     546,
+     432,
+     530
+    ]
+   },
+   {
+    "key": "The swap’s value in a few scenarios",
+    "box": [
+     824,
+     546,
+     432,
+     530
+    ]
+   },
+   {
+    "key": "Where the adjustment comes from",
+    "box": [
+     368,
+     1100,
+     888,
+     470
+    ]
+   }
+  ]
+ }
+}

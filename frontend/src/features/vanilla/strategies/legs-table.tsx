@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -37,6 +38,7 @@ export function LegsTable({ params, data, stale }: LegsTableProps) {
         <CardDescription>
           Unit price per option; value and Greeks scaled by position size and side.
         </CardDescription>
+        <ChartGuide heading="Legs" noun="table" />
       </CardHeader>
       <div className={cn('overflow-x-auto px-2 pb-2 transition-opacity', stale && 'opacity-60')}>
         <Table>

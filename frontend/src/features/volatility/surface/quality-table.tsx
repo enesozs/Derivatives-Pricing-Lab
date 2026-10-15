@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -32,6 +33,7 @@ export function QualityTable({
           and how well SVI fits each expiry. Arbitrage checks: butterfly (within an expiry) and
           calendar (against the previous expiry).
         </CardDescription>
+        <ChartGuide heading="From raw quotes to a smile" noun="table" />
       </CardHeader>
       <div className={cn('overflow-x-auto px-2 pb-2 transition-opacity', stale && 'opacity-60')}>
         <Table>

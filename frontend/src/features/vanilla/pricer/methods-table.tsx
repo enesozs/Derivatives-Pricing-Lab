@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -37,6 +38,7 @@ export function MethodsTable({ data, stale }: { data: PriceResponse | undefined;
           numerical error. Monte Carlo gamma uses the likelihood-ratio method, so it is noisier.
           {data && <> Reference: {data.reference_label}.</>}
         </CardDescription>
+        <ChartGuide heading="Same option, five methods" noun="table" />
       </CardHeader>
       <div className={cn('overflow-x-auto px-2 pb-2 transition-opacity', stale && 'opacity-60')}>
         <Table>

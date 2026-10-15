@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon, PlusIcon, XIcon } from 'lucide-react'
 import { useMemo } from 'react'
@@ -336,6 +337,7 @@ export default function CurvesPage() {
                   Each quote adds one node, solved so the quote reprices exactly. Repricing errors
                   should be at machine precision.
                 </CardDescription>
+                <ChartGuide heading="Bootstrapped nodes" noun="table" />
               </CardHeader>
               <div
                 className={cn(

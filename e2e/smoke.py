@@ -223,7 +223,13 @@ def main() -> int:
         shot(page, "credit-xva")
 
         # Learn: every area links to its chapter; chapters render math and link to experiments.
-        page.get_by_role("link", name="Theory behind this area").click()
+        page.get_by_role("link", name="Learn this area").click()
+        expect(
+            page.get_by_role("heading", name="Credit and counterparty risk", exact=True)
+        ).to_be_visible(timeout=15_000)
+        # Page tours: an annotated screenshot per page with numbered regions.
+        expect(page.get_by_role("button", name="1. Spreads and assumptions")).to_be_visible()
+        page.get_by_role("link", name="Theory", exact=True).click()
         expect(
             page.get_by_role(
                 "heading", name="07 · Credit: default curves, CDS and counterparty risk"
@@ -233,10 +239,20 @@ def main() -> int:
         page.get_by_role("button", name="Mark as done").click()
         page.get_by_role("link", name="Open the page").first.click()
         expect(page.get_by_role("heading", name="Credit default swaps")).to_be_visible()
+        # In-page chart guides.
+        page.get_by_role("button", name="How to read this chart").first.click()
+        expect(page.get_by_role("link", name="Tour of this page").first).to_be_visible()
         page.get_by_role("link", name="Learn", exact=True).click()
         expect(page.get_by_text("1 of 7 chapters marked as done")).to_be_visible()
         page.get_by_role("link", name=re.compile("Vanilla options")).click()
-        expect(page.get_by_role("heading", name=re.compile("^01"))).to_be_visible(timeout=15_000)
+        expect(page.get_by_role("heading", name="Vanilla option pricer")).to_be_visible(
+            timeout=15_000
+        )
+        page.goto(f"{BASE}/learn/start")
+        expect(page.get_by_role("heading", name="Start here: how to use the lab")).to_be_visible()
+        page.goto(f"{BASE}/learn/glossary")
+        page.get_by_role("textbox", name="Search the glossary").fill("hazard")
+        expect(page.get_by_text("Hazard rate", exact=True)).to_be_visible()
         shot(page, "learn")
 
         # Routing: deep links and unknown paths.

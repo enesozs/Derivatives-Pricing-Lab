@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChartGuide } from '@/components/chart-guide'
 import { Card, CardDescription, CardHeader, CardPanel, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -20,6 +21,7 @@ export function ChartCard({ title, description, action, stale, children }: Chart
             {title}
           </CardTitle>
           <CardDescription>{description}</CardDescription>
+          <ChartGuide heading={title} />
         </div>
         {action}
       </CardHeader>

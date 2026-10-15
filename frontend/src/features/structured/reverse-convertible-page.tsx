@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -247,6 +248,7 @@ export default function ReverseConvertiblePage() {
                 Every reverse convertible decomposes into three pieces anyone could buy separately.
                 The note is fairly priced when they add up to 100%.
               </CardDescription>
+              <ChartGuide heading="What the note is made of" noun="card" />
             </CardHeader>
             <CardPanel className="pt-0">
               <StatGrid className="grid-cols-2 sm:grid-cols-4">

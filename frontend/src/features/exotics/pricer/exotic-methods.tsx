@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -35,6 +36,7 @@ export function ExoticMethods({
           Closed forms exist only for some exotics and only under Black–Scholes; the PDE handles
           continuous barriers; Monte Carlo prices everything, under any model, at the cost of noise.
         </CardDescription>
+        <ChartGuide heading="Which methods can price it" noun="table" />
       </CardHeader>
       <div className={cn('overflow-x-auto px-2 pb-2 transition-opacity', stale && 'opacity-60')}>
         <Table>

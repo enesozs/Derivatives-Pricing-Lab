@@ -1,3 +1,4 @@
+import { ChartGuide } from '@/components/chart-guide'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { AlertTriangleIcon } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -278,6 +279,7 @@ export default function CliquetPage() {
                 that. Under Black–Scholes it is a scaled vanilla; under Heston its value depends on
                 the volatility and skew the model expects in a year’s time.
               </CardDescription>
+              <ChartGuide heading="The building block: a forward-start option" noun="card" />
             </CardHeader>
             <CardPanel className="pt-0">
               <StatGrid className="grid-cols-1 sm:grid-cols-3">
