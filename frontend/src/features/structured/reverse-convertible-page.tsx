@@ -21,7 +21,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { api, type ReverseConvertibleRequest } from '@/lib/api'
 import { fixed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { type LineSeries, LinesChart } from './charts'
+import { type LineSeries, LinesChart } from '@/components/charts/simple-charts'
 import { DEFAULT_MARKET, MarketSection, type MarketParams, toMarket } from './market-section'
 
 interface Params {

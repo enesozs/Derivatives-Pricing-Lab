@@ -208,6 +208,20 @@ def main() -> int:
         expect(page.get_by_role("cell", name="Digital put (pays 1)")).to_be_visible(timeout=20_000)
         shot(page, "structured-risk")
 
+        # Credit: the bootstrap reprices par spreads; CVA responds to collateral.
+        page.get_by_role("link", name="Credit", exact=True).click()
+        expect(page.get_by_role("heading", name="Credit default swaps")).to_be_visible()
+        expect(hero).to_have_text("115.0bp", timeout=15_000)  # the 5Y quote reprices exactly
+        page.get_by_role("button", name="Distress ×3").click()
+        expect(hero).to_have_text("345.0bp", timeout=15_000)
+        shot(page, "credit-cds")
+        page.get_by_role("link", name="Counterparty risk (xVA)").click()
+        expect(hero).not_to_have_text("—", timeout=20_000)
+        uncollateralised = hero.inner_text()
+        page.get_by_role("radio", name="Threshold").click()
+        expect(hero).not_to_have_text(uncollateralised, timeout=20_000)
+        shot(page, "credit-xva")
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()

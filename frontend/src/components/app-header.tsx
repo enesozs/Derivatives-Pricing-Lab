@@ -17,6 +17,7 @@ const SECTIONS = [
   { label: 'Multi-asset', to: '/multi-asset' },
   { label: 'Rates', to: '/rates' },
   { label: 'Structured', to: '/structured' },
+  { label: 'Credit', to: '/credit' },
 ] as const
 
 function ApiStatus() {

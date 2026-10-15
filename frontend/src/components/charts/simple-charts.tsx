@@ -33,6 +33,8 @@ interface LinesChartProps {
   current?: number
   /** Logarithmic x-axis (e.g. counts that double). */
   logX?: boolean
+  /** Hide the legend (e.g. many illustrative paths). */
+  legend?: boolean
   stale: boolean
   ariaLabel: string
   className?: string
@@ -49,6 +51,7 @@ export function LinesChart({
   yFormat,
   current,
   logX = false,
+  legend = true,
   stale,
   ariaLabel,
   className,
@@ -120,7 +123,7 @@ export function LinesChart({
       title={title}
       description={description}
       action={
-        series.length > 1 ? (
+        legend && series.length > 1 ? (
           <div className="flex flex-wrap gap-4">
             {series.map((s) => (
               <LegendKey key={s.name} color={s.color} label={s.name} />

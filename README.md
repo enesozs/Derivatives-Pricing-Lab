@@ -10,6 +10,7 @@ with a web interface. It covers five areas:
   swaptions.
 - **Structured products**: autocallables, reverse convertibles, cliquets, variance swaps, and
   portfolio stress testing.
+- **Credit**: CDS and default curves; counterparty risk (CVA/DVA) on swaps.
 
 Prices are cross-checked against QuantLib. The theory behind each area is in `docs/`; the
 roadmap and architecture are in `AGENTS.md`.

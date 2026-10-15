@@ -861,6 +861,79 @@ export interface RiskResponse {
   scenarios: { name: string; full: number; taylor: number }[]
 }
 
+// --- Credit ------------------------------------------------------------------------------------
+
+export interface CDSQuoteIn {
+  maturity: number
+  spread: number
+}
+
+export interface CDSRequest {
+  rate: number
+  recovery: number
+  quotes: CDSQuoteIn[]
+  maturity: number
+  coupon: number
+  notional: number
+}
+
+export interface CDSResponse {
+  nodes: {
+    maturity: number
+    spread: number
+    hazard: number
+    survival: number
+    triangle_hazard: number
+    repricing_error: number
+  }[]
+  grid: number[]
+  survival: number[]
+  hazard: number[]
+  par_spread: number
+  rpv01: number
+  protection_leg: number
+  upfront: number
+  default_probability: number
+  cs01: number
+}
+
+export interface XVARequest {
+  rate: number
+  a: number
+  sigma: number
+  maturity: number
+  frequency: number
+  payer: boolean
+  fixed_rate: number | null
+  notional: number
+  counterparty_spread: number
+  counterparty_recovery: number
+  own_spread: number | null
+  own_recovery: number
+  threshold: number | null
+  paths: number
+}
+
+export interface XVAResponse {
+  fixed_rate: number
+  swap_value: number
+  times: number[]
+  discounted_ee: number[]
+  discounted_ene: number[]
+  epe: number[]
+  pfe95: number[]
+  sample_values: number[][]
+  cva: number
+  dva: number
+  bilateral: number
+  cva_running_bp: number
+  cva_by_time: number[]
+  dva_by_time: number[]
+  check_times: number[]
+  check_simulated: number[]
+  check_exact: number[]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -949,4 +1022,6 @@ export const api = {
     post<CliquetResponse>('/structured/cliquet', req, signal),
   portfolioRisk: (req: RiskRequest, signal?: AbortSignal) =>
     post<RiskResponse>('/structured/risk', req, signal),
+  cds: (req: CDSRequest, signal?: AbortSignal) => post<CDSResponse>('/credit/cds', req, signal),
+  xva: (req: XVARequest, signal?: AbortSignal) => post<XVAResponse>('/credit/xva', req, signal),
 }

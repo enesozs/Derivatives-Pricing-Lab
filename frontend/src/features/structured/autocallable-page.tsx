@@ -30,7 +30,7 @@ import { useDebouncedValue } from '@/hooks/use-debounced-value'
 import { api, type AutocallableRequest, type AutocallableResponse } from '@/lib/api'
 import { fixed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { HistogramChart, LinesChart } from './charts'
+import { HistogramChart, LinesChart } from '@/components/charts/simple-charts'
 import { DEFAULT_MARKET, MarketSection, type MarketParams, toMarket } from './market-section'
 
 type Frequency = AutocallableRequest['frequency']

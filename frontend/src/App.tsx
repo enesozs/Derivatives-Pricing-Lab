@@ -5,6 +5,8 @@ import { ExoticsLayout } from '@/features/exotics/layout'
 import { AmericanPage, ExoticPricerPage } from '@/features/exotics/pages'
 import { MultiAssetLayout } from '@/features/multi-asset/layout'
 import { CorrelationPage, QuantoPage } from '@/features/multi-asset/pages'
+import { CreditLayout } from '@/features/credit/layout'
+import { CdsPage, XvaPage } from '@/features/credit/pages'
 import { RatesLayout } from '@/features/rates/layout'
 import { StructuredLayout } from '@/features/structured/layout'
 import {
@@ -63,6 +65,10 @@ export default function App() {
           <Route path="cliquet" element={<CliquetPage />} />
           <Route path="variance" element={<VariancePage />} />
           <Route path="risk" element={<RiskPage />} />
+        </Route>
+        <Route path="credit" element={<CreditLayout />}>
+          <Route index element={<CdsPage />} />
+          <Route path="xva" element={<XvaPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>

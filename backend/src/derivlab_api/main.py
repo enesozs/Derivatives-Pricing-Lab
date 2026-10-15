@@ -11,6 +11,7 @@ from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from .routes import (
+    credit,
     exotics,
     hedging,
     multi_asset,
@@ -21,7 +22,7 @@ from .routes import (
     volatility,
 )
 
-app = FastAPI(title="Derivatives Pricing Lab API", version="0.7.0")
+app = FastAPI(title="Derivatives Pricing Lab API", version="0.8.0")
 
 api = APIRouter(prefix="/api")
 api.include_router(vanilla.router)
@@ -32,6 +33,7 @@ api.include_router(exotics.router)
 api.include_router(multi_asset.router)
 api.include_router(rates.router)
 api.include_router(structured.router)
+api.include_router(credit.router)
 
 
 @api.get("/health")

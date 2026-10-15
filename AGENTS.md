@@ -29,8 +29,7 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0–6 are complete.** The roadmap's core is done; §5 lists optional extensions
-  (credit, xVA) and the deferred items worth revisiting.
+- **Phases 0–7 are complete.** Next: Phase 8 (Learn mode, guided lessons inside the app).
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -81,6 +80,12 @@ should explain *why*, not just *what*.
   - **Portfolio risk** (`/structured/risk`): editable book of options, barriers and notes;
     bump-and-revalue Greeks, spot × vol stress grid, scenarios (full revaluation vs Taylor).
   - See `docs/06-structured.md`.
+- **Credit** area, 2 pages:
+  - **CDS & default curves** (`/credit`): editable par-spread quotes → bootstrapped hazard
+    curve; survival and hazard charts; par spread, upfront at 100/500bp, RPV01, CS01.
+  - **Counterparty risk** (`/credit/xva`): Hull–White exposure simulation of a swap; EPE/PFE
+    profile, sample paths, CVA/DVA by year, collateral threshold, swaption check of exposure.
+  - See `docs/07-credit.md`.
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -119,17 +124,20 @@ should explain *why*, not just *what*.
   `ForwardStartOption`, `Cliquet` (+ Black–Scholes closed forms), `replicate_variance`,
   `expected_variance`, `simulate_realised_variance`. Note pricers take a `reference` (initial
   fixing) separate from today's spot, so shocks move a note's performance.
+- Credit (`derivlab.credit`): `HazardCurve` (piecewise-flat), `CDS` (mid-point legs, par
+  spread, upfront), `bootstrap_hazard`, `swap_exposure` (Hull–White paths, closed-form
+  revaluation, optional threshold), `credit_adjustments` (CVA/DVA), `cva_spread`.
 - Portfolio risk (`derivlab.risk.portfolio`): `Position`, `Scenario`, `shock` (BS/Heston),
   `revalue`, `portfolio_risk`, `stress_grid`, `scenario_report`, `STRESS_SCENARIOS`.
-- Tests: 370 backend tests, with QuantLib cross-checks for:
+- Tests: 382 backend tests, with QuantLib cross-checks for:
   - Heston and SABR;
   - all barrier cases, digitals, geometric Asians and lookbacks;
   - Margrabe, Stulz, Kirk, quanto and the bivariate normal;
   - Vasicek and Hull–White bond options, and the Bermudan swaption tree;
-  - forward-start options;
+  - forward-start options and the CDS mid-point engine;
 
   plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
-  all 21 pages.
+  all 23 pages.
 
 ---
 
@@ -235,6 +243,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
 │   │   │                              models (Heston/SABR calibration)
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
+│   │   ├── credit/                  ✓ hazard, cds (+ bootstrap), xva (exposure, CVA/DVA)
 │   │   ├── structured/              ✓ autocallable, reverse_convertible, cliquet (+ forward-start),
 │   │   │                              variance (replication, realised variance), _common
 │   │   ├── risk/                    ✓ bump.py (Greeks for any engine), portfolio.py (book risk, stress)
@@ -243,9 +252,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
 │   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics,
-│   │   │                              multi_asset, rates, structured
+│   │   │                              multi_asset, rates, structured, credit
 │   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics, multi_asset,
-│   │   │                              rates, structured
+│   │   │                              rates, structured, credit
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
@@ -257,7 +266,8 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │       ├── hooks/                   ✓ use-debounced-value.ts
 │       ├── components/
 │       │   ├── ui/                  ✓ coss components (vendored; edit sparingly)
-│       │   ├── charts/              ✓ echart.tsx wrapper, theme.ts (palette + chrome), interpolate.ts
+│       │   ├── charts/              ✓ echart.tsx wrapper, theme.ts (palette + chrome), interpolate.ts,
+│       │   │                          simple-charts.tsx (LinesChart, HistogramChart)
 │       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
 │       │   ├── greek-tiles.tsx      ✓ shared by every area (metadata in lib/greeks.ts)
 │       │   ├── model-section.tsx    ✓ Black–Scholes / Heston panel (exotics, structured)
@@ -277,10 +287,10 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │           ├── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
 │           ├── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
 │           ├── rates/               ✓ curve-context (shared quotes), curves/linear/options/models pages
-│           └── structured/          ✓ five pages + shared charts.tsx (LinesChart, HistogramChart) and
-│                                      market-section.tsx
+│           ├── structured/          ✓ five pages + market-section.tsx
+│           └── credit/              ✓ cds-page, xva-page
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options … 06-structured; one note per phase
+└── docs/                            ✓ 01-vanilla-options … 07-credit; one note per phase
 ```
 
 ---
@@ -377,8 +387,20 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - Simplified on purpose: one flat volatility per book in the stress engine (no surface
   shocks), no theta for notes, worst-of notes outside the portfolio page.
 
+### Phase 7: Credit and counterparty risk ✓
+- [x] Hazard-rate curves, CDS (mid-point engine, QuantLib-checked), bootstrap, upfront, CS01
+- [x] Exposure simulation for swaps under Hull–White (exact swaption check at resets)
+- [x] CVA, DVA, collateral threshold, CVA as a running spread
+- [x] UI: CDS & default curves, Counterparty risk; theory note `docs/07-credit.md`
+- Simplified on purpose: independent default and rates (no wrong-way risk), flat hazards for
+  xVA, instant margining (no margin period of risk), single swap (no netting set).
+
+### Phase 8: Learn mode ← **next**
+- In-app course: the `docs/` notes rendered with math, plus guided experiments that link to
+  the pages; a "Learn" link from every page to its chapter
+
 ### Possible extensions (not scheduled)
-- Credit: CDS pricing and hazard-rate bootstrapping; then xVA basics (CVA on a swap book)
+- Wrong-way risk, netting sets and FVA/KVA in the xVA engine
 - Stochastic-local volatility, so cliquets and barriers price consistently with the smile
 - Multi-curve rates (OIS discounting + projection curves), calendars and day counts
 - Sobol quasi-random numbers and the Heston QE scheme for faster, smoother Monte Carlo
