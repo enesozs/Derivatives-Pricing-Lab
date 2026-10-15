@@ -1,21 +1,22 @@
-"""FastAPI application. Dev: `uvicorn derivlab_api.main:app --reload` (Vite proxies /api).
+"""FastAPI application.
 
-If the frontend has been built (`frontend/dist`), it is served from `/` so the whole lab
-runs as a single process.
+Dev: `fastapi dev` (entrypoint in pyproject.toml); Vite proxies /api to it.
+If the frontend has been built (`frontend/dist`), it is served from `/` with client-side routing
+fallback, so the whole lab can run as a single process.
 """
 
 from pathlib import Path
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
-from .routes import vanilla
+from .routes import strategies, vanilla
 
-app = FastAPI(title="Derivatives Pricing Lab API", version="0.1.0")
+app = FastAPI(title="Derivatives Pricing Lab API", version="0.2.0")
 
 api = APIRouter(prefix="/api")
 api.include_router(vanilla.router)
+api.include_router(strategies.router)
 
 
 @api.get("/health")
@@ -33,4 +34,5 @@ async def value_error(_: Request, exc: ValueError) -> JSONResponse:
 
 FRONTEND_DIST = Path(__file__).resolve().parents[3] / "frontend" / "dist"
 if FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+    # Low priority: /api routes match first, then static files, then the SPA fallback.
+    app.frontend("/", directory=FRONTEND_DIST)

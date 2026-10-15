@@ -62,8 +62,9 @@ export function EChart({ option, ariaLabel, className }: EChartProps) {
   }, [])
 
   useEffect(() => {
-    // Merge (not replace) so lines morph smoothly while a slider is dragged.
-    chart.current?.setOption(option, { replaceMerge: ['series'] })
+    // Merge (not replace) so lines morph smoothly while a slider is dragged. The first draw
+    // animates quickly; ECharts' 1 s default feels sluggish.
+    chart.current?.setOption({ animationDuration: 400, ...option }, { replaceMerge: ['series'] })
   }, [option])
 
   return (

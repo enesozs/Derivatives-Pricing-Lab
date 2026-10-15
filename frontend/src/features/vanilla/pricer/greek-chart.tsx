@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { EChart, type ChartOption } from '@/components/charts/echart'
 import {
   axisStyle,
@@ -8,39 +8,40 @@ import {
   tooltipStyle,
   useChartColors,
 } from '@/components/charts/theme'
+import { Segmented } from '@/components/segmented'
 import { interpolate } from '@/components/charts/interpolate'
-import type { ProfileResponse } from '@/lib/api'
-import { fixed } from '@/lib/format'
-import { ChartCard, LegendKey } from './chart-card'
+import type { Greeks, ProfileResponse } from '@/lib/api'
+import { fixed, signed } from '@/lib/format'
+import { ChartCard } from '@/components/charts/chart-card'
+import { GREEKS } from '../greeks'
 import type { VanillaParams } from './params'
 
-interface ValueChartProps {
+interface GreekChartProps {
   params: VanillaParams
   data: ProfileResponse | undefined
   stale: boolean
 }
 
-export function ValueChart({ params, data, stale }: ValueChartProps) {
+export function GreekChart({ params, data, stale }: GreekChartProps) {
   const c = useChartColors()
+  const [greek, setGreek] = useState<keyof Greeks>('delta')
+  const meta = GREEKS.find((g) => g.key === greek) ?? GREEKS[0]
 
   const option = useMemo<ChartOption | null>(() => {
     if (!data) return null
-    const today = data.spots.map((s, i) => [s, data.value[i]])
-    const payoff = data.spots.map((s, i) => [s, data.payoff[i]])
+    const values = data[greek].map((v) => (v == null ? null : v * meta.scale))
     const axis = axisStyle(c)
-    const atSpot = interpolate(data.spots, data.value, params.spot)
+    const atSpot = interpolate(data.spots, values, params.spot)
     return {
       animationDurationUpdate: 200,
       grid: GRID,
       tooltip: {
         ...tooltipStyle(c),
         formatter: (raw: unknown) => {
-          const items = raw as { dataIndex: number }[]
-          const i = items[0]?.dataIndex ?? 0
+          const i = (raw as { dataIndex: number }[])[0]?.dataIndex ?? 0
           return (
             tooltipHeader(`Spot ${fixed(data.spots[i], 2)}`) +
-            tooltipRow(c.series1, fixed(data.value[i], 4), 'Value today') +
-            tooltipRow(c.series2, fixed(data.payoff[i], 4), 'Payoff at expiry')
+            tooltipRow(c.series1, signed(values[i], 4), meta.label)
           )
         },
       },
@@ -54,25 +55,17 @@ export function ValueChart({ params, data, stale }: ValueChartProps) {
         ...axis,
         splitLine: { show: false },
       },
-      yAxis: { type: 'value', name: 'Value', ...axis },
+      yAxis: { type: 'value', name: meta.unit, ...axis },
       series: [
         {
-          name: 'Payoff at expiry',
+          name: meta.label,
           type: 'line',
-          data: payoff,
+          data: data.spots.map((s, i) => [s, values[i]]),
           showSymbol: false,
-          lineStyle: { width: 2, color: c.series2 },
-          itemStyle: { color: c.series2 },
-          z: 1,
-        },
-        {
-          name: 'Value today',
-          type: 'line',
-          data: today,
-          showSymbol: false,
+          connectNulls: false,
           lineStyle: { width: 2, color: c.series1 },
           itemStyle: { color: c.series1 },
-          z: 2,
+          areaStyle: { color: c.band },
           markLine: {
             silent: true,
             symbol: 'none',
@@ -92,25 +85,25 @@ export function ValueChart({ params, data, stale }: ValueChartProps) {
         },
       ],
     }
-  }, [data, c, params.strike, params.spot])
+  }, [data, c, greek, meta, params.strike, params.spot])
 
   return (
     <ChartCard
-      title="Value across spot"
-      description={`Today's value versus the payoff at expiry. The gap is time value; the dot is today's spot. ${data ? `Engine: ${data.engine_label}.` : ''}`}
+      title={`${meta.label} across spot`}
+      description={meta.description}
       action={
-        <div className="flex gap-4">
-          <LegendKey color={c.series1} label="Value today" />
-          <LegendKey color={c.series2} label="Payoff at expiry" />
-        </div>
+        <Segmented<keyof Greeks>
+          label="Greek"
+          size="sm"
+          value={greek}
+          onChange={setGreek}
+          options={GREEKS.map((g) => ({ value: g.key, label: g.label }))}
+        />
       }
       stale={stale}
     >
       {option ? (
-        <EChart
-          option={option}
-          ariaLabel="Line chart of option value today and payoff at expiry across spot prices"
-        />
+        <EChart option={option} ariaLabel={`Line chart of ${meta.label} across spot prices`} />
       ) : (
         <div className="h-72" />
       )}

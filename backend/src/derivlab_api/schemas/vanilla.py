@@ -1,23 +1,17 @@
-"""Request/response models. Units match the library: decimals, years, per-unit prices."""
+"""Vanilla option schemas. Units match the library: decimals, years, per-unit prices."""
 
 from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from derivlab import (
-    American,
-    BlackScholes,
-    European,
-    Greeks,
-    Market,
-    PlainVanilla,
-    VanillaOption,
-)
+from derivlab import American, BlackScholes, European, Market, PlainVanilla, VanillaOption
+
+from .common import ExerciseStyle, GreeksOut, OptionKind
 
 
 class VanillaInputs(BaseModel):
-    kind: Literal["call", "put"] = "call"
-    exercise: Literal["european", "american"] = "european"
+    kind: OptionKind = "call"
+    exercise: ExerciseStyle = "european"
     strike: float = Field(100.0, gt=0)
     expiry: float = Field(1.0, gt=0, le=30, description="Years")
     spot: float = Field(100.0, gt=0)
@@ -44,18 +38,6 @@ class PriceRequest(VanillaInputs):
     @classmethod
     def even_paths(cls, v: int) -> int:
         return v + (v % 2)  # antithetic pairs need an even count
-
-
-class GreeksOut(BaseModel):
-    delta: float
-    gamma: float
-    vega: float
-    theta: float
-    rho: float
-
-    @classmethod
-    def of(cls, g: Greeks | None) -> "GreeksOut | None":
-        return None if g is None else cls(**vars(g))
 
 
 class MethodResult(BaseModel):
@@ -109,3 +91,34 @@ class ConvergenceResponse(BaseModel):
     lattice: list[LatticePointOut]
     monte_carlo: list[MonteCarloPointOut]
     monte_carlo_note: str | None = None
+
+
+class ImpliedVolRequest(BaseModel):
+    kind: OptionKind = "call"
+    exercise: ExerciseStyle = "european"
+    strike: float = Field(100.0, gt=0)
+    expiry: float = Field(1.0, gt=0, le=30)
+    spot: float = Field(100.0, gt=0)
+    rate: float = Field(0.05, ge=-0.1, le=0.5)
+    dividend_yield: float = Field(0.0, ge=0, le=0.5)
+    price: float = Field(10.45, gt=0, description="Observed option price per unit")
+    tree_steps: int = Field(300, ge=10, le=2000, description="Used for American options")
+
+    def build(self) -> tuple[VanillaOption, Market]:
+        exercise = European(self.expiry) if self.exercise == "european" else American(self.expiry)
+        option = VanillaOption(PlainVanilla(self.kind, self.strike), exercise)
+        return option, Market(self.spot, self.rate, self.dividend_yield)
+
+
+class ImpliedVolResponse(BaseModel):
+    implied_vol: float | None
+    iterations: int | None
+    residual: float | None
+    #: Why no implied volatility exists, when it does not.
+    message: str | None
+    engine_label: str
+    price_lower: float
+    price_upper: float
+    #: Model price as a function of volatility, to show what the solver inverts.
+    curve_vols: list[float]
+    curve_prices: list[float]

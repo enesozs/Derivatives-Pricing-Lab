@@ -73,6 +73,65 @@ export interface ConvergenceResponse {
   monte_carlo_note: string | null
 }
 
+export interface ImpliedVolRequest {
+  kind: OptionKind
+  exercise: ExerciseStyle
+  strike: number
+  expiry: number
+  spot: number
+  rate: number
+  dividend_yield: number
+  /** Observed option price per unit. */
+  price: number
+}
+
+export interface ImpliedVolResponse {
+  implied_vol: number | null
+  iterations: number | null
+  residual: number | null
+  /** Why no implied volatility exists, when it does not. */
+  message: string | null
+  engine_label: string
+  price_lower: number
+  price_upper: number
+  curve_vols: number[]
+  curve_prices: number[]
+}
+
+export interface LegInput {
+  kind: OptionKind
+  exercise: ExerciseStyle
+  strike: number
+  expiry: number
+  /** Positive = long (bought), negative = short (sold). */
+  quantity: number
+}
+
+export interface StrategyRequest {
+  spot: number
+  rate: number
+  dividend_yield: number
+  volatility: number
+  legs: LegInput[]
+  underlying_quantity: number
+}
+
+export interface StrategyResponse {
+  /** Cost to enter: positive = debit paid, negative = credit received. */
+  net_value: number
+  greeks: Greeks | null
+  legs: { unit_value: number; position_value: number; greeks: Greeks | null }[]
+  engine_label: string
+  horizon: number
+  spots: number[]
+  pnl_today: number[]
+  pnl_horizon: number[]
+  breakevens: number[]
+  /** null = unbounded. */
+  max_profit: number | null
+  max_loss: number | null
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -104,4 +163,8 @@ export const api = {
     post<ProfileResponse>('/vanilla/profile', req, signal),
   convergence: (req: VanillaInputs, signal?: AbortSignal) =>
     post<ConvergenceResponse>('/vanilla/convergence', req, signal),
+  impliedVol: (req: ImpliedVolRequest, signal?: AbortSignal) =>
+    post<ImpliedVolResponse>('/vanilla/implied-vol', req, signal),
+  strategy: (req: StrategyRequest, signal?: AbortSignal) =>
+    post<StrategyResponse>('/strategies/analyze', req, signal),
 }

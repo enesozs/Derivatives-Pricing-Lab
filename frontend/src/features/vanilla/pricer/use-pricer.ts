@@ -5,7 +5,7 @@ import { api } from '@/lib/api'
 import { toInputs, toPriceRequest, type VanillaParams } from './params'
 
 /** Fetches price, spot profile and convergence for the (debounced) parameters. */
-export function useVanilla(params: VanillaParams) {
+export function usePricer(params: VanillaParams) {
   const settled = useDebouncedValue(params, 150)
   const inputs = useMemo(() => toInputs(settled), [settled])
   const priceRequest = useMemo(() => toPriceRequest(settled), [settled])

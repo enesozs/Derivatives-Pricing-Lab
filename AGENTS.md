@@ -29,15 +29,21 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- The legacy Streamlit project (`options_lab`) was **deleted** for a fresh start. Nothing from it
-  remains except the ideas and reference values carried into the new tests.
-- **MVP is built and working**: a vanilla-options page with three pricing methods, Greeks, value and
-  Greek curves across spot, a method comparison table, and tree and Monte Carlo convergence studies.
-  - Library: `AnalyticEngine` (Black–Scholes + analytic Greeks), `CRREngine` (European/American,
-    tree Greeks), `MonteCarloEngine` (path-based, antithetic + control variate), research helpers.
-  - API: `POST /api/vanilla/{price,profile,convergence}`, `GET /api/health`.
-  - Tests: 44 backend tests (reference values, parity property test, convergence, API).
-- Not a git repository yet (see §7).
+- The legacy Streamlit project (`options_lab`) was deleted for a fresh start. Only its ideas and
+  reference values survive, in the new tests.
+- **Phase 0 (MVP) is complete. Phase 1 is in progress.** The app has three routed pages under *Vanilla*:
+  - **Pricer** (`/vanilla`): three pricing methods, Greeks, value/Greek curves, method
+    comparison, tree and Monte Carlo convergence.
+  - **Implied volatility** (`/vanilla/implied-vol`): price in, volatility out; no-arbitrage bounds;
+    the price-vs-volatility curve the solver inverts.
+  - **Strategies** (`/vanilla/strategies`): 11 presets plus free-form legs (up to 8) and shares of
+    the underlying; net debit/credit, max profit/loss, breakevens, P&L today and at the first
+    expiry, position Greeks.
+- Library: `AnalyticEngine`, `CRREngine`, `MonteCarloEngine`, `calibration.implied_volatility`,
+  `portfolio.Strategy` / `strategy_value` / `horizon_values`, research helpers.
+- API: `POST /api/vanilla/{price,profile,convergence,implied-vol}`, `POST /api/strategies/analyze`,
+  `GET /api/health`.
+- Tests: 68 backend tests (pytest + hypothesis) and a Playwright browser smoke test (`make e2e`).
 
 ---
 
@@ -136,28 +142,38 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   │   ├── pde/                 Phase 1: Crank–Nicolson + Rannacher, American via penalty
 │   │   │   └── fourier/             Phase 2: Carr–Madan, COS
 │   │   ├── research/                ✓ convergence.py, profile.py
+│   │   ├── calibration/             ✓ implied_vol.py; Phase 2: SVI, Heston/SABR calibration
+│   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
 │   │   ├── risk/                    Phase 1: bump-and-revalue, MC pathwise/LR Greeks, scenarios
-│   │   ├── calibration/             Phase 2: implied vol, SVI, Heston/SABR calibration
-│   │   ├── portfolio/  hedging/     Phase 1–3: strategies, hedging simulations
+│   │   ├── hedging/                 Phase 1: hedging simulations
 │   │   └── data/                    Phase 2: option-chain loaders, synthetic data (labelled)
 │   ├── src/derivlab_api/            ✓ FastAPI app
-│   │   ├── main.py                  ✓ app, /api router, serves frontend/dist if built
-│   │   ├── schemas.py               ✓ Pydantic request/response models
-│   │   ├── routes/vanilla.py        ✓ one router per product family
+│   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
+│   │   ├── schemas/                 ✓ common.py, vanilla.py, strategies.py (Pydantic models)
+│   │   ├── routes/                  ✓ vanilla.py, strategies.py: one router per product family
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
-│   └── tests/                       ✓ mirrors src: engines/, research/, api/
+│   └── tests/                       ✓ mirrors src: engines/, calibration/, portfolio/, research/, api/
 ├── frontend/
 │   ├── package.json  vite.config.ts  components.json (coss/shadcn registry config)
 │   └── src/
-│       ├── main.tsx  App.tsx  index.css   ✓ providers, shell, Tailwind + coss theme tokens
+│       ├── main.tsx  App.tsx  index.css   ✓ providers + BrowserRouter, route table, theme tokens
 │       ├── lib/                     ✓ api.ts (typed client), format.ts, theme.tsx, utils.ts
 │       ├── hooks/                   ✓ use-debounced-value.ts
 │       ├── components/
 │       │   ├── ui/                  ✓ coss components (vendored; edit sparingly)
 │       │   ├── charts/              ✓ echart.tsx wrapper, theme.ts (palette + chrome), interpolate.ts
-│       │   └── app-header.tsx  segmented.tsx  param-control.tsx
+│       │   ├── charts/chart-card.tsx  ✓ card + legend keys shared by every chart
+│       │   └── app-shell, app-header, page-header, panel-section, param-control,
+│       │       number-input, segmented, not-found, page-fallback   ✓ shared building blocks
 │       └── features/
-│           └── vanilla/             ✓ one folder per page: params, data hook, panels, charts
+│           └── vanilla/             ✓ product area
+│               ├── layout.tsx       ✓ sub-navigation + Suspense for lazy pages
+│               ├── pages.ts         ✓ lazy page imports (also used to preload on hover)
+│               ├── greeks.ts  greek-tiles.tsx   ✓ Greek display metadata + tiles, shared
+│               ├── pricer/          ✓ one folder per page: params.ts, data hook, panels, charts
+│               ├── implied-vol/     ✓
+│               └── strategies/      ✓ presets in params.ts
+├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
 └── docs/                            theory notes, one per phase (start in Phase 1)
 ```
 
@@ -175,20 +191,24 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - [x] Analytic BSM, CRR (European/American), path-based Monte Carlo with variance reduction
 - [x] Vanilla page: inputs, value + Greeks, value/Greek curves, method comparison, convergence
 - [x] Tooling: ruff, pyright, pytest + hypothesis, oxlint + prettier, Makefile
-- [ ] `git init` and first commit (waiting on the owner)
+- [x] `git init` and first commit
 
-### Phase 1: Vanilla options done properly
-- Implied volatility solver (Brent with no-arbitrage bounds) and an IV calculator in the UI
+### Phase 1: Vanilla options done properly ← **current**
+- [x] Implied volatility solver (Brent with no-arbitrage bounds, any engine) and IV page
+- [x] Routing (React Router, lazy-loaded pages with hover preloading) and the Vanilla sub-navigation
+- [x] Multi-leg strategies: presets, leg editor, P&L today/at horizon, breakevens, max profit/loss
+- [x] Browser smoke test (`e2e/smoke.py`)
+- [ ] `docs/01-vanilla-options.md`: theory note for what the pages show
 - Black-76 (options on futures/forwards) and Bachelier (normal model) analytic engines
 - PDE engine: Crank–Nicolson with Rannacher smoothing, American via penalty/Brennan–Schwartz,
   non-uniform grid around the strike
 - Trinomial and Jarrow–Rudd trees; Richardson extrapolation; interactive small-tree visualiser
 - `risk/`: bump-and-revalue Greeks for any engine (common random numbers for MC); MC pathwise and
   likelihood-ratio Greeks
-- Multi-leg strategies (spreads, straddles, butterflies): payoff diagrams, aggregated Greeks
 - Delta-hedging simulator (discrete rebalancing, costs, vol misspecification)
 - More hypothesis properties: price bounds, monotonicity in strike/vol/maturity, convexity in strike
-- Frontend: routing (React Router or TanStack Router) once there is a second page
+- Strategies: American legs in the editor (API already supports them), P&L in volatility/time
+  (scenario grid / heatmap)
 
 ### Phase 2: Volatility beyond a constant σ
 - Real option-chain loading (yfinance) with cleaning; cached snapshots for reproducible tests
@@ -236,7 +256,7 @@ assets, has an unusual shape, or embeds features like early redemption.
 |---|---|---|
 | Pricing library | Python 3.13 (`>=3.12,<3.14`), NumPy, SciPy | The quant ecosystem; vectorised numerics |
 | Acceleration | Numba, later and only if profiled | Loops that can't be vectorised (LSM, PSOR) |
-| API | FastAPI + Pydantic v2, served by uvicorn | Typed validation, auto OpenAPI docs at `/docs` |
+| API | FastAPI (`fastapi[standard]`) + Pydantic v2; `fastapi dev` / `fastapi run` CLI | Typed validation, OpenAPI docs at `/docs`, `app.frontend()` serves the built SPA |
 | Python env | venv + pip, deps in `backend/pyproject.toml` (hatchling) | uv is not installed on this machine; switching later is optional |
 | Python quality | pytest + hypothesis, ruff (lint + format, line 100), pyright (standard) | |
 | Reference oracle | QuantLib-Python, dev dependency only, from Phase 2–3 | Test exotics/rates against an independent library |
@@ -246,9 +266,11 @@ assets, has an unusual shape, or embeds features like early redemption.
 | Components | **coss UI** (Base UI primitives, shadcn-style copy-in components) | Accessible, polished, owned in-repo. Add with `npx shadcn@latest add @coss/<name>` |
 | Charts | Apache ECharts 6 (modular imports) | Canvas performance, smooth updates, log axes, 3D later via echarts-gl |
 | Data fetching | TanStack Query | Caching, cancellation, keep-previous-data during slider drags |
+| Routing | React Router v8, declarative mode (`BrowserRouter`/`Routes`/`NavLink`) | Lazy pages via `React.lazy`; `NavLink` sets `aria-current` for the segmented nav style |
 | Icons / fonts | lucide-react; Inter Variable + Geist Mono (fontsource) | |
 | Frontend quality | `tsc -b` (strict), oxlint, prettier | |
-| Version control | git (not initialised yet) | |
+| Browser testing | Playwright (Python, dev dependency) driving the installed Google Chrome | `make e2e`; no browser download needed |
+| Version control | git | |
 
 Adding a runtime dependency needs a row (or a note) in this table saying why.
 
@@ -256,15 +278,14 @@ Adding a runtime dependency needs a row (or a note) in this table saying why.
 
 ## 7. Open decisions
 
-1. **git**: initialise the repo and make the first commit. Waiting on the owner's go-ahead.
-2. **API types**: TypeScript types in `frontend/src/lib/api.ts` are hand-written to mirror
-   `schemas.py`. Generate them from OpenAPI (`openapi-typescript`) once it supports TypeScript 6,
-   or sooner if drift becomes a problem.
-3. **Bundle size**: the JS bundle is about 1 MB (330 kB gzipped), mostly ECharts. Code-split per
-   page when routing arrives in Phase 1.
+1. **API types**: TypeScript types in `frontend/src/lib/api.ts` are hand-written to mirror
+   `backend/src/derivlab_api/schemas/`. Generate them from OpenAPI (`openapi-typescript`) once it
+   supports TypeScript 6, or sooner if drift becomes a problem.
+2. **Bundle size**: pages are code-split. ECharts (~200 kB gzipped) still loads with every page
+   because every page has charts; it becomes lazy automatically when a chart-free page exists.
 
 Resolved: folder renamed to `05-derivatives-pricing-lab`; package is `derivlab`; Streamlit dropped
-for React + FastAPI; pip + venv instead of uv for now.
+for React + FastAPI; pip + venv instead of uv for now; git initialised.
 
 ---
 
@@ -292,8 +313,11 @@ for React + FastAPI; pip + venv instead of uv for now.
 - Every endpoint gets at least a smoke test in `tests/api/`.
 
 **Frontend**
-- One folder per page under `src/features/<page>/`: `params.ts` (state, defaults, unit conversion),
-  `use-<page>.ts` (queries), and components.
+- Pages live under `src/features/<area>/<page>/`, with `params.ts` (state, defaults, unit
+  conversion → request), a data hook or `useQuery` call, and components. Each page default-exports
+  its component and is registered lazily in `<area>/pages.ts` and in `App.tsx`'s route table.
+- Build panels from `PanelSection` + `ParamControl` (slider + exact input) or `NumberInput`
+  (compact); options with `Segmented`; headings with `PageHeader`; charts inside `ChartCard`.
 - Use coss components first (`src/components/ui`); the coss skill and particles catalog show
   composition patterns. Remove components that end up unused (`npx shadcn add` re-adds them).
 - Charts follow the dataviz rules:
@@ -311,7 +335,8 @@ for React + FastAPI; pip + venv instead of uv for now.
 1. Library: instrument/model/engine plus tests (reference, consistency, convergence).
 2. API: schema + route + API test.
 3. Frontend: types in `lib/api.ts`, then the page/section under `features/`.
-4. Update §2, §4 and §5 of this file.
+4. Extend `e2e/smoke.py` with the new page's key interaction, and run `make e2e`.
+5. Update §2, §4 and §5 of this file.
 
 ---
 
@@ -323,17 +348,38 @@ From the project root:
 make install   # backend venv + editable install with [api,dev]; npm install
 make dev       # API on :8000 and Vite on :5173 → open http://localhost:5173
 make test      # backend pytest (fast tests)
+make e2e       # Playwright smoke test over every page (needs `make dev` running + Chrome)
 make lint      # ruff format/check, pyright, tsc, oxlint, prettier --check
 make check     # lint + test + frontend build
-make serve     # build the UI and serve everything from FastAPI on http://localhost:8000
+make serve     # build the UI and serve everything from FastAPI (`fastapi run`) on :8000
 ```
 
 Direct equivalents: `cd backend && .venv/bin/pytest -q`, `cd frontend && npm run dev`.
 API docs: http://localhost:8000/docs while the API is running.
 
+**Editor:** open `05-derivatives-pricing-lab/` itself as the VS Code folder, so `.vscode/settings.json`
+applies. It points Pylance at `backend/.venv`. If VS Code uses another interpreter (e.g. Anaconda),
+every `fastapi`/`derivlab` import shows as unresolved even though the app runs fine.
+
 ---
 
-## 10. References
+## 10. Agent skills
+
+Installed at the `QuantProjects/` level (`.claude/skills/`, `.agents/skills/`). Use them:
+
+| Skill | Use for |
+|---|---|
+| `find-docs` (Context7) | **Before using any library API you're not certain of.** Versions here are new (React Router 8, Vite 8, TypeScript 6, ECharts 6, FastAPI 0.14x) |
+| `fastapi` | API code: `Annotated`, return types, routers, `app.frontend()`, `fastapi` CLI |
+| `vite` | `vite.config.ts`, build and code-splitting (Vite 8 uses Rolldown) |
+| `vercel-react-best-practices` | React structure and performance (lazy loading, re-render rules) |
+| `webapp-testing` | Driving the app with Playwright; see `e2e/smoke.py` |
+| `coss`, `coss-particles` | UI components and composition patterns |
+| `dataviz` (built in) | Any chart: palette, marks, tooltips, accessibility |
+
+---
+
+## 11. References
 
 - Hull, *Options, Futures, and Other Derivatives*: general reference, trees, Greeks, rates basics
 - Haug, *The Complete Guide to Option Pricing Formulas*: closed forms for exotics (test oracles)

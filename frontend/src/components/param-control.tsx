@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { Label } from '@/components/ui/label'
 import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/ui/number-field'
 import { Slider } from '@/components/ui/slider'
+import { inputModeFor } from '@/lib/input-mode'
 
 interface ParamControlProps {
   label: string
@@ -48,7 +49,10 @@ export function ParamControl({
           }}
         >
           <NumberFieldGroup className="items-center">
-            <NumberFieldInput className="text-right font-medium" />
+            <NumberFieldInput
+              className="text-right font-medium"
+              inputMode={inputModeFor(min, step, digits)}
+            />
             {unit && (
               <span className="pe-2.5 text-muted-foreground text-xs select-none">{unit}</span>
             )}

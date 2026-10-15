@@ -1,10 +1,9 @@
-import { InfoIcon } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { Tooltip, TooltipPopup, TooltipTrigger } from '@/components/ui/tooltip'
 import type { PriceResponse } from '@/lib/api'
-import { fixed, signed } from '@/lib/format'
+import { fixed } from '@/lib/format'
 import { cn } from '@/lib/utils'
-import { GREEKS, type VanillaParams } from './params'
+import { GreekTiles } from '../greek-tiles'
+import type { VanillaParams } from './params'
 
 interface ValueSummaryProps {
   params: VanillaParams
@@ -50,37 +49,7 @@ export function ValueSummary({ params, data, stale }: ValueSummaryProps) {
         </div>
 
         <div className="flex flex-col gap-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-semibold text-sm">Greeks</h2>
-            <span className="text-muted-foreground text-xs">{data?.greeks_label ?? ''}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-5">
-            {GREEKS.map((g) => {
-              const raw = data?.greeks?.[g.key]
-              return (
-                <div key={g.key} className="flex flex-col gap-1 bg-card p-3.5">
-                  <Tooltip>
-                    <TooltipTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="flex w-fit cursor-help items-center gap-1 text-muted-foreground text-xs outline-none focus-visible:text-foreground"
-                        />
-                      }
-                    >
-                      <span className="font-mono">{g.symbol}</span> {g.label}
-                      <InfoIcon className="size-3 opacity-60" aria-hidden="true" />
-                    </TooltipTrigger>
-                    <TooltipPopup className="max-w-60">{g.description}</TooltipPopup>
-                  </Tooltip>
-                  <span className="font-semibold text-xl tracking-tight">
-                    {raw == null ? '—' : signed(raw * g.scale, 4)}
-                  </span>
-                  <span className="text-[11px] text-muted-foreground">{g.unit}</span>
-                </div>
-              )
-            })}
-          </div>
+          <GreekTiles greeks={data?.greeks} source={data?.greeks_label} />
           {data && !data.greeks && (
             <p className="text-muted-foreground text-xs">Greeks are undefined for these inputs.</p>
           )}

@@ -7,7 +7,16 @@ from typing import Literal
 import numpy as np
 from fastapi import APIRouter
 
-from derivlab import AnalyticEngine, CRREngine, MonteCarloEngine, PricingResult, UnsupportedError
+from derivlab import (
+    AnalyticEngine,
+    BlackScholes,
+    CRREngine,
+    MonteCarloEngine,
+    PricingEngine,
+    PricingResult,
+    UnsupportedError,
+)
+from derivlab.calibration import implied_volatility, price_bounds
 from derivlab.research import (
     REFERENCE_TREE_STEPS,
     lattice_convergence,
@@ -19,6 +28,8 @@ from derivlab.research import (
 from ..schemas import (
     ConvergenceResponse,
     GreeksOut,
+    ImpliedVolRequest,
+    ImpliedVolResponse,
     LatticePointOut,
     MethodResult,
     MonteCarloPointOut,
@@ -153,4 +164,45 @@ def convergence(req: VanillaInputs) -> ConvergenceResponse:
         lattice=lattice,
         monte_carlo=monte_carlo,
         monte_carlo_note=note,
+    )
+
+
+@router.post("/implied-vol")
+def implied_vol(req: ImpliedVolRequest) -> ImpliedVolResponse:
+    option, market = req.build()
+    engine: PricingEngine
+    if option.is_american:
+        engine, label = CRREngine(req.tree_steps), f"CRR tree · {req.tree_steps} steps"
+    else:
+        engine, label = AnalyticEngine(), "Black–Scholes"
+    lower, upper = price_bounds(option, market)
+
+    sigma = iterations = residual = message = None
+    try:
+        result = implied_volatility(req.price, option, market, engine)
+        sigma, iterations, residual = result.volatility, result.iterations, result.residual
+    except ValueError as e:
+        message = str(e)
+
+    # Price-vs-volatility curve; tree engines cannot price at tiny volatilities, so skip those.
+    top = max(1.5, 1.5 * sigma) if sigma else 1.5
+    curve_engine = CRREngine(150) if option.is_american else engine
+    vols, prices = [], []
+    for v in np.linspace(0.01, top, 75):
+        try:
+            prices.append(curve_engine.price(option, market, BlackScholes(float(v))).value)
+            vols.append(float(v))
+        except ValueError:
+            continue
+
+    return ImpliedVolResponse(
+        implied_vol=sigma,
+        iterations=iterations,
+        residual=residual,
+        message=message,
+        engine_label=label,
+        price_lower=lower,
+        price_upper=upper,
+        curve_vols=vols,
+        curve_prices=prices,
     )

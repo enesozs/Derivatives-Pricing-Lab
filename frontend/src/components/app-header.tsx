@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { MoonIcon, SunIcon } from 'lucide-react'
+import { NavLink } from 'react-router'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -50,16 +51,16 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-6 px-4 sm:px-6">
-        <div className="flex items-center gap-2.5">
+        <NavLink to="/vanilla" className="flex items-center gap-2.5">
           <Logo />
           <span className="font-semibold text-sm tracking-tight">Derivatives Pricing Lab</span>
-        </div>
+        </NavLink>
         <nav aria-label="Sections" className={cn(segmentedControlRootClassName, 'hidden md:flex')}>
           {SECTIONS.map((s) =>
             s.phase == null ? (
-              <a key={s.label} href="#" aria-current="page" className={item}>
+              <NavLink key={s.label} to="/vanilla" className={item}>
                 {s.label}
-              </a>
+              </NavLink>
             ) : (
               <span
                 key={s.label}

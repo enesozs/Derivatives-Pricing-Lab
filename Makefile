@@ -1,7 +1,7 @@
 # Derivatives Pricing Lab — common tasks. Run from the project root.
 PY := backend/.venv/bin
 
-.PHONY: install dev api web test lint check build serve
+.PHONY: install dev api web test e2e lint check build serve
 
 install:            ## Create the Python venv and install both halves
 	python3 -m venv backend/.venv
@@ -16,7 +16,7 @@ dev:                ## API on :8000 + Vite on :5173 (open http://localhost:5173)
 	wait
 
 api:
-	cd backend && .venv/bin/uvicorn derivlab_api.main:app --reload --port 8000
+	cd backend && .venv/bin/fastapi dev --port 8000
 
 web:
 	cd frontend && npm run dev
@@ -24,8 +24,11 @@ web:
 test:               ## Python test suite (fast tests only)
 	cd backend && .venv/bin/pytest -q
 
+e2e:                ## Browser smoke test against running dev servers (needs `make dev` + Chrome)
+	$(PY)/python e2e/smoke.py http://localhost:5173
+
 lint:               ## Format + lint + type-check both halves
-	cd backend && .venv/bin/ruff format . && .venv/bin/ruff check . && .venv/bin/pyright
+	cd backend && .venv/bin/ruff format . ../e2e && .venv/bin/ruff check . ../e2e && .venv/bin/pyright
 	cd frontend && npx tsc -b && npm run lint
 
 check: lint test    ## Everything CI would run
@@ -35,4 +38,4 @@ build:              ## Production build of the frontend (served by FastAPI from 
 	cd frontend && npm run build
 
 serve: build        ## Single process: API + built UI on http://localhost:8000
-	cd backend && .venv/bin/uvicorn derivlab_api.main:app --port 8000
+	cd backend && .venv/bin/fastapi run --port 8000

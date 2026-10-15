@@ -10,7 +10,7 @@ import {
 } from '@/components/charts/theme'
 import type { ConvergenceResponse } from '@/lib/api'
 import { compact, fixed, integer, scientific } from '@/lib/format'
-import { ChartCard, LegendKey } from './chart-card'
+import { ChartCard, LegendKey } from '@/components/charts/chart-card'
 
 interface ConvergenceProps {
   data: ConvergenceResponse | undefined
