@@ -51,7 +51,8 @@ export const FONT_FAMILY = "'Inter Variable', system-ui, sans-serif"
 /** Shared axis chrome: hairline solid grid, muted labels, no ticks. */
 export function axisStyle(c: ChartColors) {
   return {
-    axisLine: { lineStyle: { color: c.axis } },
+    // Keep axes at the plot edge even when the other axis spans zero.
+    axisLine: { onZero: false, lineStyle: { color: c.axis } },
     axisTick: { show: false },
     axisLabel: { color: c.muted, fontSize: 11, fontFamily: FONT_FAMILY },
     splitLine: { lineStyle: { color: c.grid, type: 'solid' as const, width: 1 } },

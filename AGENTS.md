@@ -29,7 +29,7 @@ should explain *why*, not just *what*.
 
 ## 2. Current state (2026-10-15)
 
-- **Phases 0–3 are complete.** Next up: Phase 4 (multi-asset and correlation).
+- **Phases 0–4 are complete.** Next up: Phase 5 (interest-rate derivatives).
 - **Vanilla** area, 5 pages: Pricer (5 methods), Implied volatility, Trees & grids, Strategies,
   Hedging. See `docs/01-vanilla-options.md`.
 - **Volatility** area, 3 pages:
@@ -49,6 +49,13 @@ should explain *why*, not just *what*.
   - **American by simulation** (`/exotics/american`): Longstaff–Schwartz vs tree, with the
     exercise boundary vs the PDE and convergence in paths. Works under Heston too.
   - See `docs/03-exotics.md`.
+- **Multi-asset** area, 2 pages:
+  - **Correlation lab** (`/multi-asset`): exchange, spread, basket, best-of and worst-of options
+    on 2–5 assets with uniform correlation. Shows the closed form vs Monte Carlo, price against
+    correlation with a sensitivity, and a scatter of joint terminal scenarios.
+  - **Quanto** (`/multi-asset/quanto`): quanto call/put, the drift adjustment, price against
+    asset–FX correlation, and a joint asset+FX Monte Carlo check.
+  - See `docs/04-multi-asset.md`.
 - Instruments: `VanillaOption`, and exotics `DigitalOption`, `BarrierOption`, `AsianOption`,
   `LookbackOption` (union `Instrument`). Exotics implement `payoff_paths(paths, times)`.
 - Models: `BlackScholes`, `Heston`, `Merton`, `SABR`, `LocalVol` (union `Model`).
@@ -71,12 +78,18 @@ should explain *why*, not just *what*.
 - Data: `derivlab.data`, which covers raw chains, the Yahoo fetcher, the bundled
   `snapshots/spy-2026-10-14.json`, synthetic Heston chains, and cleaning (parity forwards, OTM
   selection, wing trimming).
-- Tests: 274 backend tests, with QuantLib cross-checks for:
+- Multi-asset (`derivlab.multi_asset`, its own small type family): `MultiAssetMarket`,
+  `CorrelatedBlackScholes`, products `ExchangeOption`, `SpreadOption`, `BasketOption`,
+  `RainbowOption`, `QuantoOption`. Engines: `MultiAssetAnalyticEngine` (Margrabe, Kirk, Levy,
+  Stulz) and `MultiAssetMonteCarloEngine` (Cholesky paths; geometric-basket control variate),
+  plus `quanto_price` / `quanto_monte_carlo`. Bivariate normal CDF: `core.bivariate` (Genz).
+- Tests: 303 backend tests, with QuantLib cross-checks for:
   - Heston and SABR;
   - all barrier cases, digitals, geometric Asians and lookbacks;
+  - Margrabe, Stulz, Kirk, quanto and the bivariate normal;
 
   plus the synthetic → SVI → Dupire → PDE consistency test, and a Playwright smoke test over
-  all 10 pages.
+  all 12 pages.
 
 ---
 
@@ -162,7 +175,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 ├── backend/
 │   ├── pyproject.toml               ✓ deps + ruff, pyright, pytest config
 │   ├── src/derivlab/                ✓ pricing library
-│   │   ├── core/                    ✓ errors.py (UnsupportedError), stats.py (normal cdf/pdf)
+│   │   ├── core/                    ✓ errors (UnsupportedError), stats (normal), bivariate (Genz)
 │   │   ├── market.py                ✓ Market (flat rate). Becomes market/ with curves in Phase 5
 │   │   ├── models/                  ✓ black_scholes, heston, merton, sabr, local_vol (+ char. functions)
 │   │   ├── results.py               ✓ Greeks, PricingResult
@@ -175,6 +188,7 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   │   ├── pde/                 ✓ Crank–Nicolson + Rannacher, American (penalty), barriers
 │   │   │   └── fourier/             ✓ COS method (vectorised over strikes), risk-neutral density
 │   │   ├── research/                ✓ convergence.py, profile.py
+│   │   ├── multi_asset/             ✓ market/model, instruments, analytic, montecarlo
 │   │   ├── calibration/             ✓ implied_vol, svi (quasi-explicit + direct), surface (Dupire),
 │   │   │                              models (Heston/SABR calibration)
 │   │   ├── portfolio/               ✓ strategy.py (signed legs + underlying, horizon values)
@@ -183,8 +197,9 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │   │   └── data/                    ✓ chain, yahoo, synthetic, cleaning, snapshots/*.json
 │   ├── src/derivlab_api/            ✓ FastAPI app
 │   │   ├── main.py                  ✓ app, /api router, app.frontend() serves frontend/dist
-│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics
-│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics
+│   │   ├── schemas/                 ✓ common, vanilla, strategies, hedging, volatility, exotics,
+│   │   │                              multi_asset
+│   │   ├── routes/                  ✓ vanilla, strategies, hedging, volatility, exotics, multi_asset
 │   │   └── export_openapi.py        ✓ dumps the OpenAPI schema
 │   └── tests/                       ✓ mirrors src; test_properties.py = no-arbitrage properties
 ├── frontend/
@@ -211,9 +226,10 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 │               ├── strategies/      ✓ presets in params.ts; scenario heatmap
 │               └── hedging/         ✓
 │           ├── volatility/          ✓ layout + source context shared by surface/, models/, calibration/
-│           └── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
+│           ├── exotics/             ✓ pricer/, american/, shared model-section (BS / Heston)
+│           └── multi-asset/         ✓ correlation-page, quanto-page, shared correlation-chart
 ├── e2e/smoke.py                     ✓ Playwright smoke test over every page (`make e2e`)
-└── docs/                            ✓ 01-vanilla-options, 02-volatility, 03-exotics; one note per phase
+└── docs/                            ✓ 01-vanilla-options … 04-multi-asset; one note per phase
 ```
 
 ---
@@ -277,12 +293,15 @@ the theory, and this file updated. Do the phases in order. Within a phase, order
 - Deferred: Sobol quasi-random numbers and the Heston QE scheme (Euler + Brownian bridge is
   enough at current accuracy); Numba (no hot spot found: the slowest exotic price is ~0.5 s).
 
-### Phase 4: Multi-asset and correlation ← **next**
-- Correlated paths (Cholesky); correlation as a model parameter
-- Exchange/spread (Margrabe, Kirk), basket (moment matching + MC), rainbow (best-of/worst-of), quanto
-- Correlation sensitivities and stress
+### Phase 4: Multi-asset and correlation ✓
+- [x] Correlated GBM (Cholesky), PSD-validated correlation matrices, uniform-correlation helper
+- [x] Exchange (Margrabe), spread (Kirk), basket (Levy; geometric basket exact), best-of /
+      worst-of (Stulz, two assets; Monte Carlo beyond), quanto (exact + joint asset/FX MC)
+- [x] Genz bivariate normal CDF; QuantLib cross-checks for every closed form
+- [x] Correlation sensitivity (dV/dρ) and price-vs-correlation curves; joint-scenario scatter
+- [x] UI: Correlation lab and Quanto pages; theory note `docs/04-multi-asset.md`
 
-### Phase 5: Interest-rate derivatives
+### Phase 5: Interest-rate derivatives ← **next**
 - Day counts and schedules; curve bootstrapping from deposits/FRAs/swaps (`market/` package)
 - Bonds, FRAs, interest-rate swaps
 - Black-76 (options on futures/forwards) and Bachelier (normal model) analytic engines

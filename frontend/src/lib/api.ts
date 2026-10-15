@@ -482,6 +482,67 @@ export interface AmericanMCResponse {
   runtime_ms: number
 }
 
+// --- Multi-asset ------------------------------------------------------------------------------
+
+export type MultiAssetProduct = 'exchange' | 'spread' | 'basket' | 'best_of' | 'worst_of'
+
+export interface MultiAssetRequest {
+  product: MultiAssetProduct
+  kind: OptionKind
+  strike: number
+  expiry: number
+  rate: number
+  assets: { spot: number; volatility: number; dividend_yield: number }[]
+  correlation: number
+  mc_paths: number
+  seed: number
+}
+
+export interface MultiAssetResponse {
+  value: number
+  value_label: string
+  methods: {
+    label: string
+    status: 'ok' | 'unsupported' | 'error'
+    value: number | null
+    stderr: number | null
+    runtime_ms: number | null
+    note: string | null
+  }[]
+  correlation_sensitivity: number
+  correlation_grid: number[]
+  correlation_values: number[]
+  correlation_engine: string
+  scatter_x: number[]
+  scatter_y: number[]
+  scatter_pays: boolean[]
+}
+
+export interface QuantoRequest {
+  kind: OptionKind
+  strike: number
+  expiry: number
+  spot: number
+  domestic_rate: number
+  foreign_rate: number
+  dividend_yield: number
+  asset_volatility: number
+  fx_volatility: number
+  correlation: number
+  fixed_fx: number
+  mc_paths: number
+}
+
+export interface QuantoResponse {
+  value: number
+  mc_value: number
+  mc_stderr: number
+  uncorrelated_value: number
+  drift_adjustment: number
+  correlation_grid: number[]
+  correlation_values: number[]
+}
+
 export class ApiError extends Error {}
 
 async function post<T>(path: string, body: unknown, signal?: AbortSignal): Promise<T> {
@@ -544,4 +605,8 @@ export const api = {
     post<ExoticPathsResponse>('/exotics/paths', req, signal),
   americanMC: (req: AmericanMCRequest, signal?: AbortSignal) =>
     post<AmericanMCResponse>('/exotics/american', req, signal),
+  multiAsset: (req: MultiAssetRequest, signal?: AbortSignal) =>
+    post<MultiAssetResponse>('/multi-asset/price', req, signal),
+  quanto: (req: QuantoRequest, signal?: AbortSignal) =>
+    post<QuantoResponse>('/multi-asset/quanto', req, signal),
 }

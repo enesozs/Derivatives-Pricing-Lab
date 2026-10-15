@@ -135,6 +135,20 @@ def main() -> int:
         assert abs(lsm - 6.09) < 0.08, f"LSM American put {lsm} far from tree value 6.09"
         shot(page, "exotics-american")
 
+        # Multi-asset: every product prices; more assets fall back to Monte Carlo.
+        page.get_by_role("link", name="Multi-asset", exact=True).click()
+        expect(page.get_by_role("heading", name="Correlation lab")).to_be_visible()
+        for product in ("Exchange", "Spread", "Best-of", "Worst-of", "Basket"):
+            page.get_by_role("radio", name=product, exact=True).click()
+            expect(page.get_by_text("Correlation sensitivity")).to_be_visible(timeout=15_000)
+        page.get_by_role("radio", name="4 assets").click()
+        expect(page.get_by_text("Asset 4")).to_be_visible()
+        shot(page, "multi-asset")
+        page.get_by_role("link", name="Quanto").click()
+        expect(page.get_by_text("Drift adjustment")).to_be_visible(timeout=15_000)
+        expect(hero).to_have_text("9.3583")  # matches QuantLib's quanto engine
+        shot(page, "quanto")
+
         # Routing: deep links and unknown paths.
         page.goto(f"{BASE}/vanilla/strategies")
         expect(page.get_by_role("heading", name="Option strategies")).to_be_visible()

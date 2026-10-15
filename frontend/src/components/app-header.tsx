@@ -15,6 +15,7 @@ const SECTIONS = [
   { label: 'Vanilla', to: '/vanilla', phase: null },
   { label: 'Volatility', to: '/volatility', phase: null },
   { label: 'Exotics', to: '/exotics', phase: null },
+  { label: 'Multi-asset', to: '/multi-asset', phase: null },
   { label: 'Rates', to: null, phase: 5 },
 ] as const
 
