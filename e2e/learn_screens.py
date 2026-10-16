@@ -71,12 +71,18 @@ def main() -> int:
     manifest = {}
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome")
-        page = browser.new_page(viewport={"width": 1280, "height": 900}, color_scheme="light")
+        page = browser.new_page(
+            viewport={"width": 1280, "height": 900}, color_scheme="light"
+        )
         for key, path in PAGES.items():
             page.goto(base + path)
             page.wait_for_load_state("networkidle")
-            page.wait_for_timeout(2500)  # charts animate in; slow Monte Carlo pages settle
-            page.screenshot(path=IMAGES / f"{key}.jpg", full_page=True, type="jpeg", quality=72)
+            page.wait_for_timeout(
+                2500
+            )  # charts animate in; slow Monte Carlo pages settle
+            page.screenshot(
+                path=IMAGES / f"{key}.jpg", full_page=True, type="jpeg", quality=72
+            )
             manifest[key] = {"path": path, **page.evaluate(REGIONS_JS)}
             print(f"✓ {key}: {len(manifest[key]['regions'])} regions")
         browser.close()

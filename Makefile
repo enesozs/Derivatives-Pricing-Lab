@@ -27,8 +27,9 @@ test:               ## Python test suite (fast tests only)
 e2e:                ## Browser smoke test against running dev servers (needs `make dev` + Chrome)
 	$(PY)/python e2e/smoke.py http://localhost:5173
 
-learn-shots:        ## Re-capture the Learn page screenshots and region positions (needs `make dev`)
+learn-shots:        ## Re-capture Learn and README screenshots (needs `make dev`)
 	$(PY)/python e2e/learn_screens.py http://localhost:5173
+	$(PY)/python e2e/readme_screens.py http://localhost:5173
 
 lint:               ## Format + lint + type-check both halves
 	cd backend && .venv/bin/ruff format . ../e2e && .venv/bin/ruff check . ../e2e && .venv/bin/pyright

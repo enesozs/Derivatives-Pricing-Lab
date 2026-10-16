@@ -183,7 +183,7 @@ PricingResult(value, stderr | None, greeks | None, diagnostics: dict)
 The current API (this is real code, see `backend/tests/`):
 
 ```python
-from derivlab import (AnalyticEngine, BlackScholes, CRREngine, European, American, Market,
+from derivlab import (AnalyticEngine, BinomialEngine, BlackScholes, European, American, Market,
                       MonteCarloEngine, PlainVanilla, VanillaOption)
 
 option = VanillaOption(PlainVanilla("call", strike=100.0), European(expiry=1.0))
@@ -191,7 +191,7 @@ market = Market(spot=100.0, rate=0.05, dividend_yield=0.0)
 model  = BlackScholes(volatility=0.20)
 
 AnalyticEngine().price(option, market, model).value               # 10.4506
-CRREngine(steps=500).price(option, market, model).greeks          # tree Greeks
+BinomialEngine(steps=500).price(option, market, model).greeks     # tree Greeks (CRR)
 MonteCarloEngine(paths=100_000, seed=42).price(option, market, model).confidence_interval()
 ```
 
