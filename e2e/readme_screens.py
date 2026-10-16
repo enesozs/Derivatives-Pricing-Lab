@@ -42,9 +42,7 @@ def main() -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(channel="chrome")
-        page = browser.new_page(
-            viewport={"width": 1440, "height": 960}, color_scheme="light"
-        )
+        page = browser.new_page(viewport={"width": 1440, "height": 960}, color_scheme="light")
         for name, (path, heading) in SHOTS.items():
             page.goto(base + path)
             page.wait_for_load_state("networkidle")

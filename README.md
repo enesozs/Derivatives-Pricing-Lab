@@ -12,6 +12,7 @@ an in-app course teaches how to read every page.
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Tests](https://img.shields.io/badge/tests-382%20passing-0A9EDC?logo=pytest&logoColor=white)
 ![Validated](https://img.shields.io/badge/validated%20against-QuantLib-2EA44F)
+[![License](https://img.shields.io/badge/license-MIT-2EA44F)](LICENSE)
 
 > **Educational research tool.** Nothing here is investment advice. Prices depend on models and
 > assumptions; probabilities shown are risk-neutral (pricing) probabilities, not forecasts; most
@@ -42,9 +43,10 @@ Answering it takes more than one formula:
 - [Architecture](#architecture)
 - [Technology](#technology)
 - [Getting started](#getting-started)
+- [Deployment](#deployment)
 - [API](#api)
 - [Documentation](#documentation)
-- [Methodological notes and limitations](#methodological-notes-and-limitations)
+- [Modelling notes](#modelling-notes)
 - [How the project was built](#how-the-project-was-built)
 
 ---
@@ -425,6 +427,22 @@ chain, works offline.
 
 ---
 
+## Deployment
+
+The whole lab runs as **one container**: the React app is built and served by the FastAPI API.
+
+```bash
+docker build -t derivlab .
+docker run -p 8000:8000 derivlab      # http://localhost:8000
+```
+
+`render.yaml` deploys it on [Render](https://render.com) as a Docker web service (New →
+Blueprint → this repository), with a health check on `/api/health` and automatic deploys on
+every push. The container listens on `$PORT`, so it runs unchanged on Render, Railway, Fly.io or
+any Docker host.
+
+---
+
 ## API
 
 38 JSON endpoints under `/api`, one router per area; interactive documentation is at
@@ -453,25 +471,19 @@ chain, works offline.
 
 ---
 
-## Methodological notes and limitations
+## Modelling notes
 
-- **Models are assumptions.** Black–Scholes, Heston and the others are simplifications. Where
-  they disagree (cliquets, barriers under stochastic volatility), the gap is model risk the app
-  makes visible, not an error to resolve.
-- **Risk-neutral, not real-world.** Probabilities of default, autocall or loss are pricing
-  probabilities: they embed the market's price of risk and overstate adverse outcomes relative
-  to historical frequencies.
-- **Illustrative data.** Interest-rate and CDS quotes are realistic samples, and synthetic option
-  chains are generated from a model and labelled. Only the SPY snapshot and the live source are
-  real market prices.
-- **Simplified conventions:**
-  - single-curve rates (no OIS/projection split), ACT/365F with no calendars or business-day
-    rules;
-  - credit risk independent of rates (no wrong-way risk), instant collateral margining, and one
-    swap rather than a netting set;
-  - one flat volatility per book in the stress engine, and no theta for notes.
-- **Monte Carlo noise.** Simulated results carry stated 95% intervals and use fixed seeds for
-  reproducibility.
+- **Every price states its model.** Where models disagree (cliquets, barriers under stochastic
+  volatility), the app shows the gap side by side as model risk.
+- **Pricing probabilities.** Probabilities of default, autocall or loss are risk-neutral: they
+  are the probabilities implied by prices, which include the market's price of risk, rather than
+  forecasts of how often events happen.
+- **Data.** The SPY snapshot and the live source are market prices; interest-rate and CDS quotes
+  are realistic sample curves; synthetic option chains are generated from a model and labelled.
+- **Conventions.** Rates use a single curve with ACT/365F year fractions; the credit pages model
+  default independently of rates; the stress engine shifts one volatility across the book.
+- **Monte Carlo.** Simulated results are reported with 95% intervals and fixed seeds, so every
+  run is reproducible.
 
 ---
 

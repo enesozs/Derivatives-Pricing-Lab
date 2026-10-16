@@ -63,9 +63,7 @@ def main() -> int:
 
         # Trees & grids: tree visualiser and PDE boundary for an American put (the page default).
         page.get_by_role("link", name="Trees & grids").click()
-        expect(
-            page.get_by_role("heading", name="Binomial tree, node by node")
-        ).to_be_visible()
+        expect(page.get_by_role("heading", name="Binomial tree, node by node")).to_be_visible()
         page.get_by_role("radio", name="Leisen–Reimer").click()
         page.get_by_role("radio", name="8", exact=True).click()
         expect(page.get_by_text("Early-exercise boundary")).to_be_visible()
@@ -82,9 +80,7 @@ def main() -> int:
         # Strategies: presets, editing, empty state.
         page.get_by_role("link", name="Strategies").click()
         expect(hero).to_have_text("16.02")  # long straddle debit
-        expect(
-            page.get_by_text("Stress test: P&L by spot and volatility")
-        ).to_be_visible()
+        expect(page.get_by_text("Stress test: P&L by spot and volatility")).to_be_visible()
         page.get_by_role("button", name="Iron condor").click()
         expect(page.get_by_text("Net credit")).to_be_visible()
         expect(page.locator("fieldset")).to_have_count(4)
@@ -94,23 +90,15 @@ def main() -> int:
             page.get_by_role("button", name=f"Remove leg {i}").click()
         expect(page.get_by_text("Add a leg to get started")).to_be_visible()
         page.get_by_role("button", name="Calendar spread").click()
-        expect(
-            page.get_by_text("0.25 yrs")
-        ).to_be_visible()  # horizon = front-month expiry
-        expect(
-            page.get_by_text("Stress test: P&L by spot and volatility")
-        ).to_be_visible()
+        expect(page.get_by_text("0.25 yrs")).to_be_visible()  # horizon = front-month expiry
+        expect(page.get_by_text("Stress test: P&L by spot and volatility")).to_be_visible()
         shot(page, "strategies")
 
         # Volatility: surface from the bundled snapshot, then synthetic data.
         page.get_by_role("link", name="Volatility", exact=True).click()
-        expect(
-            page.get_by_role("heading", name="Implied volatility surface")
-        ).to_be_visible()
+        expect(page.get_by_role("heading", name="Implied volatility surface")).to_be_visible()
         expect(page.get_by_text("From raw quotes to a smile")).to_be_visible()
-        expect(page.get_by_role("cell", name="Jan 19, 2029")).to_be_visible(
-            timeout=15_000
-        )
+        expect(page.get_by_role("cell", name="Jan 19, 2029")).to_be_visible(timeout=15_000)
         page.get_by_role("radio", name="Synthetic").click()
         expect(page.get_by_text("Synthetic data")).to_be_visible(timeout=15_000)
         shot(page, "volatility-surface")
@@ -125,9 +113,7 @@ def main() -> int:
         page.get_by_role("link", name="Calibration").click()
         expect(page.get_by_text("Feller condition")).to_be_visible(timeout=15_000)
         rmse = float(hero.inner_text())
-        assert rmse < 0.3, (
-            f"Heston fit to its own synthetic data should be tight, got {rmse}"
-        )
+        assert rmse < 0.3, f"Heston fit to its own synthetic data should be tight, got {rmse}"
         shot(page, "volatility-calibration")
 
         # Exotics: the default down-and-out call matches its closed form; every product prices.
@@ -136,14 +122,10 @@ def main() -> int:
         expect(hero).to_have_text("9.9234")
         for product in ("Digital", "Asian", "Lookback", "Barrier"):
             page.get_by_role("radio", name=product, exact=True).click()
-            expect(
-                page.get_by_role("heading", name="Which methods can price it")
-            ).to_be_visible()
+            expect(page.get_by_role("heading", name="Which methods can price it")).to_be_visible()
             expect(page.get_by_text("Priced").first).to_be_visible(timeout=15_000)
         page.get_by_role("radio", name="Heston").first.click()
-        expect(page.get_by_text("Monte Carlo · 50,000 paths").first).to_be_visible(
-            timeout=15_000
-        )
+        expect(page.get_by_text("Monte Carlo · 50,000 paths").first).to_be_visible(timeout=15_000)
         shot(page, "exotics")
 
         # American by simulation: Longstaff–Schwartz lands near the tree.
@@ -151,9 +133,7 @@ def main() -> int:
         expect(page.get_by_text("Early-exercise premium")).to_be_visible(timeout=20_000)
         expect(hero).not_to_have_text("—", timeout=20_000)
         lsm = float(hero.inner_text())
-        assert abs(lsm - 6.09) < 0.08, (
-            f"LSM American put {lsm} far from tree value 6.09"
-        )
+        assert abs(lsm - 6.09) < 0.08, f"LSM American put {lsm} far from tree value 6.09"
         shot(page, "exotics-american")
 
         # Multi-asset: every product prices; more assets fall back to Monte Carlo.
@@ -161,9 +141,7 @@ def main() -> int:
         expect(page.get_by_role("heading", name="Correlation lab")).to_be_visible()
         for product in ("Exchange", "Spread", "Best-of", "Worst-of", "Basket"):
             page.get_by_role("radio", name=product, exact=True).click()
-            expect(page.get_by_text("Correlation sensitivity")).to_be_visible(
-                timeout=15_000
-            )
+            expect(page.get_by_text("Correlation sensitivity")).to_be_visible(timeout=15_000)
         page.get_by_role("radio", name="4 assets").click()
         expect(page.get_by_text("Asset 4")).to_be_visible()
         shot(page, "multi-asset")
@@ -178,9 +156,7 @@ def main() -> int:
         expect(page.get_by_role("cell", name="Swap 10Y")).to_be_visible(timeout=15_000)
         shot(page, "rates-curves")
         page.get_by_role("link", name="Swaps & bonds").click()
-        expect(hero).to_have_text(
-            "0", timeout=15_000
-        )  # a swap at the par rate is worth zero
+        expect(hero).to_have_text("0", timeout=15_000)  # a swap at the par rate is worth zero
         page.get_by_role("radio", name="Off-market").click()
         expect(hero).not_to_have_text("0", timeout=15_000)
         expect(page.get_by_text("Modified duration")).to_be_visible()
@@ -208,9 +184,7 @@ def main() -> int:
         expect(hero).not_to_have_text("—", timeout=20_000)
         page.get_by_role("button", name="Set the fair coupon").click()
         page.get_by_role("radio", name="Worst of 3").click()
-        expect(page.get_by_text("Fair coupon against correlation")).to_be_visible(
-            timeout=20_000
-        )
+        expect(page.get_by_text("Fair coupon against correlation")).to_be_visible(timeout=20_000)
         shot(page, "structured-autocallable")
         page.get_by_role("link", name="Reverse convertibles").click()
         expect(page.get_by_text("What the note is made of")).to_be_visible()
@@ -229,21 +203,15 @@ def main() -> int:
         )
         shot(page, "structured-variance")
         page.get_by_role("link", name="Portfolio risk").click()
-        expect(page.get_by_role("cell", name="Book", exact=True)).to_be_visible(
-            timeout=20_000
-        )
+        expect(page.get_by_role("cell", name="Book", exact=True)).to_be_visible(timeout=20_000)
         page.get_by_role("button", name="Market maker").click()
-        expect(page.get_by_role("cell", name="Digital put (pays 1)")).to_be_visible(
-            timeout=20_000
-        )
+        expect(page.get_by_role("cell", name="Digital put (pays 1)")).to_be_visible(timeout=20_000)
         shot(page, "structured-risk")
 
         # Credit: the bootstrap reprices par spreads; CVA responds to collateral.
         page.get_by_role("link", name="Credit", exact=True).click()
         expect(page.get_by_role("heading", name="Credit default swaps")).to_be_visible()
-        expect(hero).to_have_text(
-            "115.0bp", timeout=15_000
-        )  # the 5Y quote reprices exactly
+        expect(hero).to_have_text("115.0bp", timeout=15_000)  # the 5Y quote reprices exactly
         page.get_by_role("button", name="Distress ×3").click()
         expect(hero).to_have_text("345.0bp", timeout=15_000)
         shot(page, "credit-cds")
@@ -260,9 +228,7 @@ def main() -> int:
             page.get_by_role("heading", name="Credit and counterparty risk", exact=True)
         ).to_be_visible(timeout=15_000)
         # Page tours: an annotated screenshot per page with numbered regions.
-        expect(
-            page.get_by_role("button", name="1. Spreads and assumptions")
-        ).to_be_visible()
+        expect(page.get_by_role("button", name="1. Spreads and assumptions")).to_be_visible()
         page.get_by_role("link", name="Theory", exact=True).click()
         expect(
             page.get_by_role(
@@ -283,9 +249,7 @@ def main() -> int:
             timeout=15_000
         )
         page.goto(f"{BASE}/learn/start")
-        expect(
-            page.get_by_role("heading", name="Start here: how to use the lab")
-        ).to_be_visible()
+        expect(page.get_by_role("heading", name="Start here: how to use the lab")).to_be_visible()
         page.goto(f"{BASE}/learn/glossary")
         page.get_by_role("textbox", name="Search the glossary").fill("hazard")
         expect(page.get_by_text("Hazard rate", exact=True)).to_be_visible()

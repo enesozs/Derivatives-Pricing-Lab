@@ -229,6 +229,8 @@ Current tree (✓ = exists). Planned directories are created when their phase st
 ├── CLAUDE.md                        ✓ imports AGENTS.md for Claude Code
 ├── README.md                        ✓ quick start for humans
 ├── Makefile                         ✓ install / dev / test / lint / check / serve
+├── Dockerfile  .dockerignore        ✓ one image: built UI served by the API on $PORT
+├── render.yaml                      ✓ Render Blueprint (Docker web service, /api/health check)
 ├── backend/
 │   ├── pyproject.toml               ✓ deps + ruff, pyright, pytest config
 │   ├── src/derivlab/                ✓ pricing library
@@ -543,6 +545,7 @@ make learn-shots  # refresh the Learn screenshots after UI changes (needs `make 
 make lint      # ruff format/check, pyright, tsc, oxlint, prettier --check
 make check     # lint + test + frontend build
 make serve     # build the UI and serve everything from FastAPI (`fastapi run`) on :8000
+docker build -t derivlab . && docker run -p 8000:8000 derivlab   # the deployable image
 ```
 
 Direct equivalents: `cd backend && .venv/bin/pytest -q`, `cd frontend && npm run dev`.
